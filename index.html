@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pickle - 그림을 그리고 경매하는 픽클</title>
+    
+    <!-- Favicon & Web App Icon 적용 -->
+    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="apple-touch-icon" href="logo.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK (v11.6.1) 연동 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            GoogleAuthProvider, 
+            signInWithPopup, 
+            signOut, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            setDoc, 
+            addDoc, 
+            onSnapshot, 
+            updateDoc, 
+            getDoc 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 유저 제공 Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZDVWmzPD8wga7zEXJJw_OpuNMHn84pXo",
+            authDomain: "pickle-1962f.firebaseapp.com",
+            projectId: "pickle-1962f",
+            storageBucket: "pickle-1962f.firebasestorage.app",
+            messagingSenderId: "452788717198",
+            appId: "1:452788717198:web:592bce95d1847e14d52bdf",
+            measurementId: "G-7JE9Y70D9G"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = firebaseConfig.projectId;
+
+        // 전역 객체로 모듈 내보내기
+        window.FB = {
+            auth,
+            db,
+            appId,
+            signInAnonymously,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            GoogleAuthProvider,
+            signInWithPopup,
+            signOut,
+            onAuthStateChanged,
+            collection,
+            doc,
+            setDoc,
+            getDoc,
+            addDoc,
+            onSnapshot,
+            updateDoc
+        };
+    </script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Noto Sans KR', 'sans-serif'] },
+                    colors: {
+                        pickle: { green: '#4ade80', greenDark: '#22c55e', bg: '#f8fafc' }
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+                        'button': '0 6px 20px -2px rgba(34, 197, 94, 0.35)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f1f5f9;
+            touch-action: manipulation;
+        }
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #ffffff;
+            box-shadow: 0 0 40px rgba(0,0,0,0.08);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .canvas-container { touch-action: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Custom Toast Animation */
+        #toast {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: translate(-50%, -20px);
+            opacity: 0;
+            pointer-events: none;
+        }
+        #toast.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen relative">
+
+    <!-- 모바일 프레임 -->
+    <div class="app-container">
+
+        <!-- 0. LOGIN VIEW (이메일, 구글, 게스트 멀티 로그인) -->
+        <section id="view-login" class="flex-1 flex flex-col items-center justify-center bg-slate-50 px-6 absolute inset-0 z-50 overflow-y-auto py-8">
+            <div class="w-full max-w-sm bg-white p-7 rounded-[2rem] shadow-soft text-center space-y-6 border border-slate-100 my-auto">
+                
+                <!-- Logo Placeholder -->
+                <div class="w-20 h-20 mx-auto bg-emerald-50 rounded-3xl flex items-center justify-center overflow-hidden shadow-inner border border-emerald-100">
+                    <img src="logo.png" alt="Pickle Logo" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'text-4xl\'>🥒</span>';">
+                </div>
+                
+                <div>
+                    <h1 class="text-3xl font-black text-slate-800 tracking-tight">Pickle</h1>
+                    <p class="text-xs text-slate-500 mt-1 font-medium">나만의 그림을 그리고 경매에 도전해보세요!</p>
+                </div>
+
+                <!-- 로그인 / 회원가입 탭 스위처 -->
+                <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                    <button type="button" onclick="switchAuthMode('login')" id="authTabLogin" class="flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm">로그인</button>
+                    <button type="button" onclick="switchAuthMode('signup')" id="authTabSignup" class="flex-1 py-2 rounded-lg text-slate-500">회원가입</button>
+                </div>
+
+                <!-- 1) 로그인 폼 -->
+                <form id="formLogin" onsubmit="handleEmailLogin(event)" class="space-y-3 text-left">
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-600 pl-1 block mb-1">이메일</label>
+                        <input type="email" id="loginEmail" required placeholder="example@pickle.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-600 pl-1 block mb-1">비밀번호</label>
+                        <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <button type="submit" id="btnEmailLogin" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-button transition-all mt-1">
+                        로그인
+                    </button>
+                </form>
+
+                <!-- 2) 회원가입 폼 (초기 숨김) -->
+                <form id="formSignup" onsubmit="handleEmailSignup(event)" class="space-y-3 text-left hidden">
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-600 pl-1 block mb-1">작가 닉네임</label>
+                        <input type="text" id="signupNickname" required placeholder="예: 피클화가" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-600 pl-1 block mb-1">이메일</label>
+                        <input type="email" id="signupEmail" required placeholder="example@pickle.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-600 pl-1 block mb-1">비밀번호</label>
+                        <input type="password" id="signupPassword" required minlength="6" placeholder="6자리 이상" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <button type="submit" id="btnEmailSignup" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-button transition-all mt-1">
+                        계정 만들기
+                    </button>
+                </form>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-200"></div>
+                    <span class="flex-shrink mx-3 text-[10px] text-slate-400 font-bold">또는</span>
+                    <div class="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <!-- 간편 로그인 버튼 모음 -->
+                <div class="space-y-2">
+                    <!-- Google 로그인 -->
+                    <button type="button" onclick="handleGoogleLogin()" class="w-full py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                        Google로 시작하기
+                    </button>
+
+                    <!-- 게스트/익명 로그인 -->
+                    <button type="button" onclick="handleGuestLogin()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-user-ghost"></i> 게스트로 바로 체험하기
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 헤더 (초기 숨김) -->
+        <header id="appHeader" class="hidden sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-5 py-4 justify-between items-center">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="switchTab('home')">
+                <div class="w-9 h-9 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-md">🥒</div>
+                <span class="text-2xl font-black tracking-tight text-slate-800">Pickle</span>
+            </div>
+            
+            <div class="bg-emerald-50 hover:bg-emerald-100 transition-colors px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-emerald-200/60 cursor-pointer" onclick="showToast(`현재 보유 포인트: ${userData.points}P`)">
+                <i class="fa-solid fa-coins text-amber-500 text-sm"></i>
+                <span id="userPoints" class="font-bold text-sm text-emerald-900">...</span>
+                <span class="text-xs font-semibold text-emerald-600">P</span>
+            </div>
+        </header>
+
+        <!-- 메인 컨텐츠 영역 (초기 숨김) -->
+        <main id="appMain" class="hidden flex-1 p-5 pb-24 overflow-y-auto no-scrollbar">
+
+            <!-- 1. HOME -->
+            <section id="view-home" class="space-y-6">
+                <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl p-6 text-white shadow-button relative overflow-hidden">
+                    <div class="relative z-10">
+                        <span class="bg-white/20 backdrop-blur-md text-xs font-bold px-2.5 py-1 rounded-full text-white inline-block mb-2">
+                            ✨ 오늘 출석하면 +100P
+                        </span>
+                        <h2 class="text-2xl font-black leading-tight">직접 그리고,<br>실시간 경매까지!</h2>
+                        <p class="text-emerald-100 text-sm mt-1">나만의 그림을 픽클에서 가치를 인정받으세요.</p>
+                        
+                        <button onclick="claimDailyReward()" id="checkInBtn" class="mt-4 bg-white text-emerald-700 font-bold px-4 py-2 rounded-xl text-sm shadow-sm active:scale-95 transition-transform flex items-center gap-1.5">
+                            <i class="fa-solid fa-calendar-check text-emerald-500"></i> 출석 보상 받기
+                        </button>
+                    </div>
+                    <div class="absolute -right-4 -bottom-6 text-8xl opacity-20 pointer-events-none select-none">🎨</div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <h3 class="text-lg font-bold text-slate-800">주요 서비스</h3>
+                    <span id="authBadge" class="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full border border-emerald-100"><i class="fa-solid fa-circle-check"></i> 접속 완료</span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <button onclick="switchTab('draw')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl p-5 shadow-button flex flex-col items-center justify-center min-h-[100px] text-center">
+                        <span class="text-xl font-extrabold tracking-tight">그림 그리기</span>
+                        <span class="text-xs text-emerald-100 mt-1 font-medium">모바일 픽셀 & 그래픽 툴 (작품 생성 시 +100P)</span>
+                    </button>
+                    <button onclick="switchTab('auction')" class="w-full bg-rose-500 hover:bg-rose-600 text-white rounded-2xl p-5 shadow-lg shadow-rose-500/25 flex flex-col items-center justify-center min-h-[100px] text-center">
+                        <span class="text-xl font-extrabold tracking-tight">경매</span>
+                        <span class="text-xs text-rose-100 mt-1 font-medium">실시간 그림 거래 시장</span>
+                    </button>
+                    <button onclick="switchTab('gallery')" class="w-full bg-sky-500 hover:bg-sky-600 text-white rounded-2xl p-5 shadow-lg shadow-sky-500/25 flex flex-col items-center justify-center min-h-[100px] text-center">
+                        <span class="text-xl font-extrabold tracking-tight">갤러리</span>
+                        <span class="text-xs text-sky-100 mt-1 font-medium">소장작 및 내 보관 작품</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 2. DRAWING -->
+            <section id="view-draw" class="hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-slate-800">그림 스튜디오</h2>
+                    <div class="flex gap-2">
+                        <button onclick="clearCanvas()" class="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-200">초기화</button>
+                        <button onclick="saveCanvasToGallery()" class="px-3 py-1.5 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 shadow-sm">
+                            <i class="fa-solid fa-download"></i> 저장 (+100P)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 캔버스 및 픽셀 이미지 위치/크기 조정 오버레이 영역 -->
+                <div class="bg-white border-2 border-slate-200 rounded-2xl shadow-inner relative w-full aspect-square max-w-[360px] mx-auto overflow-hidden">
+                    <!-- 기본 드로잉 캔버스 -->
+                    <canvas id="paintCanvas" width="360" height="360" class="absolute inset-0 w-full h-full bg-white touch-none cursor-crosshair"></canvas>
+                    
+                    <!-- 이미지 조절 모드 전용 투명 오버레이 캔버스 -->
+                    <canvas id="overlayCanvas" width="360" height="360" class="absolute inset-0 w-full h-full touch-none z-10 hidden"></canvas>
+
+                    <!-- 이미지 위치/크기 조절 모드 UI 컨트롤 -->
+                    <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl flex flex-col gap-2 z-30 hidden">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-slate-500 whitespace-nowrap">크기 조절</span>
+                            <input type="range" id="imgScaleSlider" min="0.5" max="3" step="0.1" value="1" class="flex-1 accent-emerald-500">
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="cancelImageTransform()" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-xl text-[11px] font-bold">취소</button>
+                            <button onclick="confirmImageTransform()" class="flex-1 py-2 bg-emerald-500 text-white rounded-xl text-[11px] font-bold shadow-md"><i class="fa-solid fa-stamp"></i> 여기에 찍기</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 그리기 도구 툴바 -->
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-3">
+                    <div class="flex justify-between items-center gap-1">
+                        <button onclick="setTool('pen')" id="tool-pen" class="tool-btn flex-1 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-sm flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-pen"></i> 펜
+                        </button>
+                        <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn flex-1 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-xs font-bold flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-eraser"></i> 지우개
+                        </button>
+                        <button onclick="setTool('rect')" id="tool-rect" class="tool-btn flex-1 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-xs font-bold flex flex-col items-center gap-1">
+                            <i class="fa-regular fa-square"></i> 사각형
+                        </button>
+                        <button onclick="setTool('circle')" id="tool-circle" class="tool-btn flex-1 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl text-xs font-bold flex flex-col items-center gap-1">
+                            <i class="fa-regular fa-circle"></i> 원
+                        </button>
+                        <label class="flex-1 py-2 bg-purple-50 hover:bg-purple-100 transition-colors text-purple-700 border border-purple-200 rounded-xl text-xs font-bold flex flex-col items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-file-image"></i> 픽셀화
+                            <input type="file" id="imageLoader" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                        </label>
+                    </div>
+                    <div class="flex justify-between items-center pt-1 border-t border-slate-200">
+                        <div class="flex items-center gap-2">
+                            <input type="color" id="colorPicker" value="#000000" onchange="changeColor(this.value)" class="w-8 h-8 rounded-full border-0 cursor-pointer p-0">
+                            <div class="flex gap-1.5">
+                                <button onclick="changeColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-slate-300"></button>
+                                <button onclick="changeColor('#ef4444')" class="w-6 h-6 rounded-full bg-red-500"></button>
+                                <button onclick="changeColor('#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500"></button>
+                                <button onclick="changeColor('#22c55e')" class="w-6 h-6 rounded-full bg-emerald-500"></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-ruler-horizontal text-xs text-slate-500"></i>
+                            <input type="range" id="lineWidth" min="1" max="25" value="4" onchange="changeLineWidth(this.value)" class="w-20 accent-emerald-500">
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="openAuctionModalFromCanvas()" class="w-full py-3.5 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-rose-500/20 active:scale-95 transition-transform flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-gavel"></i> 이 작품으로 실시간 경매 올리기 (+100P)
+                </button>
+            </section>
+
+            <!-- 3. AUCTION -->
+            <section id="view-auction" class="hidden space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">실시간 경매</h2>
+                        <p class="text-xs text-slate-500">6시간 경매 라이브 마켓</p>
+                    </div>
+                </div>
+
+                <div id="auctionList" class="space-y-4">
+                    <div class="text-center py-10 text-xs text-slate-400 font-bold">경매 목록을 불러오는 중...</div>
+                </div>
+            </section>
+
+            <!-- 4. GALLERY -->
+            <section id="view-gallery" class="hidden space-y-4">
+                <h2 class="text-xl font-bold text-slate-800">내 갤러리</h2>
+                
+                <div class="flex bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+                    <button onclick="switchGalleryTab('my-drawings')" id="tab-my-drawings" class="flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm">
+                        미판매 작품 (<span id="unSoldCnt">0</span>)
+                    </button>
+                    <button onclick="switchGalleryTab('purchased')" id="tab-purchased" class="flex-1 py-2 rounded-xl text-slate-500">
+                        소장한 작품 (<span id="purchasedCnt">0</span>)
+                    </button>
+                </div>
+
+                <div id="galleryGrid" class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2 text-center py-8 text-xs text-slate-400">보관된 작품이 없습니다.</div>
+                </div>
+            </section>
+
+            <!-- 5. SETTINGS -->
+            <section id="view-settings" class="hidden space-y-4">
+                <h2 class="text-xl font-bold text-slate-800">계정 및 설정</h2>
+                
+                <!-- 내 프로필 카드 -->
+                <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-inner">🥒</div>
+                    <div class="flex-1 overflow-hidden">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center">
+                            <span id="settingsNickname" class="truncate">작가</span>
+                            <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full ml-2 flex-shrink-0">Artist</span>
+                        </h3>
+                        <p id="settingsUid" class="text-[11px] text-slate-400 mt-1 font-mono truncate">ID: ...</p>
+                    </div>
+                </div>
+
+                <!-- 계정 관리 메뉴 모음 -->
+                <div class="bg-white border border-slate-100 rounded-2xl divide-y divide-slate-100 shadow-sm overflow-hidden text-sm">
+                    <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="changeNickname()">
+                        <span class="font-semibold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-user-pen text-emerald-500 w-5"></i> 닉네임 변경</span>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>
+                    </div>
+                    <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="showToast('서비스 상태 정상')">
+                        <span class="font-semibold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500 w-5"></i> 보안 및 앱 상태</span>
+                        <span class="text-xs text-emerald-500 font-bold">안전함</span>
+                    </div>
+                    <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-rose-50 transition-colors text-rose-500 font-bold" onclick="showLogoutModal()">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-right-from-bracket w-5"></i> 로그아웃</span>
+                        <i class="fa-solid fa-chevron-right text-xs text-rose-300"></i>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- 하단 네비게이션 (초기 숨김) -->
+        <nav id="appNav" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white/95 backdrop-blur-md border-t border-slate-100 px-4 py-2 justify-around items-center z-40">
+            <button onclick="switchTab('home')" id="nav-home" class="nav-btn flex flex-col items-center gap-1 text-emerald-500">
+                <i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">홈</span>
+            </button>
+            <button onclick="switchTab('draw')" id="nav-draw" class="nav-btn flex flex-col items-center gap-1 text-slate-400">
+                <i class="fa-solid fa-palette text-lg"></i><span class="text-[10px] font-bold">그리기</span>
+            </button>
+            <button onclick="switchTab('auction')" id="nav-auction" class="nav-btn flex flex-col items-center gap-1 text-slate-400">
+                <i class="fa-solid fa-gavel text-lg"></i><span class="text-[10px] font-bold">경매</span>
+            </button>
+            <button onclick="switchTab('gallery')" id="nav-gallery" class="nav-btn flex flex-col items-center gap-1 text-slate-400">
+                <i class="fa-solid fa-images text-lg"></i><span class="text-[10px] font-bold">갤러리</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex flex-col items-center gap-1 text-slate-400">
+                <i class="fa-solid fa-gear text-lg"></i><span class="text-[10px] font-bold">설정</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- 경매 등록 모달 -->
+    <div id="auctionModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <h3 class="font-extrabold text-lg text-slate-800">경매에 작품 출품하기</h3>
+                <button onclick="closeAuctionModal()" class="text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="modalImagePreview" class="w-full h-44 bg-slate-100 rounded-2xl flex items-center justify-center overflow-hidden border"></div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-1 block">작품명</label>
+                    <input type="text" id="auctionTitle" placeholder="예: 우주 속 피클" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-600 mb-1 block">시작 가격 (P)</label>
+                    <input type="number" id="auctionPrice" value="100" min="10" step="10" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeAuctionModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold">취소</button>
+                <button onclick="submitAuction()" class="flex-1 py-3 bg-rose-500 text-white rounded-xl text-xs font-bold shadow-md">출품 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 커스텀 닉네임 입력 모달 -->
+    <div id="nicknameModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-[300px] w-full p-6 space-y-4 shadow-2xl">
+            <h3 class="font-extrabold text-lg text-slate-800 text-center">작가 이름 변경</h3>
+            <input type="text" id="newNicknameInput" placeholder="새로운 닉네임" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm text-center focus:outline-none focus:border-emerald-500">
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('nicknameModal').classList.add('hidden')" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold">취소</button>
+                <button onclick="saveNickname()" class="flex-1 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md">저장하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 커스텀 알림 모달 (중요 알림용: 낙찰/유찰 등) -->
+    <div id="alertModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 transition-opacity">
+        <div class="bg-white rounded-3xl max-w-[300px] w-full p-6 space-y-3 shadow-2xl text-center">
+            <div id="alertIcon" class="text-4xl mb-2">🎉</div>
+            <h3 id="alertTitle" class="font-extrabold text-lg text-slate-800">알림</h3>
+            <p id="alertMessage" class="text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">메시지 내용</p>
+            <button onclick="document.getElementById('alertModal').classList.add('hidden')" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-md mt-3 transition-colors">확인</button>
+        </div>
+    </div>
+
+    <!-- 로그아웃 확인 모달 -->
+    <div id="logoutModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-[300px] w-full p-6 space-y-4 shadow-2xl text-center">
+            <div class="text-4xl mb-2 text-rose-500"><i class="fa-solid fa-right-from-bracket"></i></div>
+            <h3 class="font-extrabold text-lg text-slate-800">로그아웃</h3>
+            <p class="text-sm text-slate-600">현재 계정에서 로그아웃 하시겠습니까?</p>
+            <div class="flex gap-2 mt-4">
+                <button onclick="document.getElementById('logoutModal').classList.add('hidden')" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold shadow-md transition-colors">취소</button>
+                <button onclick="executeLogout()" class="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-md transition-colors">로그아웃</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 커스텀 토스트 알림 UI -->
+    <div id="toast" class="fixed top-20 left-1/2 z-[100] bg-slate-800 text-white px-5 py-3 rounded-full text-sm font-bold shadow-2xl flex items-center gap-2">
+        <i class="fa-solid fa-circle-info text-emerald-400"></i>
+        <span id="toastMsg">메시지</span>
+    </div>
+
+    <!-- JS LOGIC -->
+    <script>
+        let currentUser = null;
+        let userData = { points: 1250, nickname: '작가' };
+        let pendingSignupNickname = '';
+        
+        let myDrawingsList = [];
+        let purchasedArtList = [];
+        let auctionItemsList = [];
+        let auctionTimerInterval = null; // 경매 탭 타이머
+        
+        const SIX_HOURS_MS = 6 * 60 * 60 * 1000; // 6시간 밀리초
+
+        // 기본 캔버스 변수
+        let currentTool = 'pen';
+        let currentColor = '#000000';
+        let currentLineWidth = 4;
+        let isDrawing = false, startX = 0, startY = 0, snapshot = null;
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 이미지 위치/크기 조절 (오버레이) 전용 변수
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const oCtx = overlayCanvas.getContext('2d');
+        let tfImgObj = null;
+        let tfX = 0, tfY = 0, tfScale = 1;
+        let isTfDragging = false;
+        let tfStartX = 0, tfStartY = 0;
+
+        // 커스텀 토스트 알림 함수
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // 커스텀 모달 (낙찰/유찰 알림 등 중요 팝업)
+        function showAlertModal(title, message, icon = '🎉') {
+            document.getElementById('alertIcon').innerText = icon;
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertMessage').innerText = message;
+            document.getElementById('alertModal').classList.remove('hidden');
+        }
+
+        // 인증 모드 탭 스위처 (로그인 / 회원가입)
+        function switchAuthMode(mode) {
+            if (mode === 'login') {
+                document.getElementById('formLogin').classList.remove('hidden');
+                document.getElementById('formSignup').classList.add('hidden');
+                document.getElementById('authTabLogin').className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm";
+                document.getElementById('authTabSignup').className = "flex-1 py-2 rounded-lg text-slate-500";
+            } else {
+                document.getElementById('formLogin').classList.add('hidden');
+                document.getElementById('formSignup').classList.remove('hidden');
+                document.getElementById('authTabLogin').className = "flex-1 py-2 rounded-lg text-slate-500";
+                document.getElementById('authTabSignup').className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm";
+            }
+        }
+
+        // 앱 초기화 로직
+        window.addEventListener('load', () => {
+            initCanvas();
+            setupImageTransformEvents();
+            
+            const checkFB = setInterval(() => {
+                if (window.FB && window.FB.auth) {
+                    clearInterval(checkFB);
+                    setupFirebaseAuth();
+                }
+            }, 100);
+        });
+
+        // Auth 상태 리스너 설정
+        function setupFirebaseAuth() {
+            const { auth, onAuthStateChanged, db, appId, doc, setDoc, onSnapshot } = window.FB;
+
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUser = user;
+                    
+                    // 화면 전환: 메인 서비스 오픈
+                    document.getElementById('view-login').classList.add('hidden');
+                    document.getElementById('appHeader').classList.remove('hidden');
+                    document.getElementById('appHeader').classList.add('flex');
+                    document.getElementById('appMain').classList.remove('hidden');
+                    document.getElementById('appNav').classList.remove('hidden');
+                    document.getElementById('appNav').classList.add('flex');
+
+                    document.getElementById('settingsUid').innerText = `ID: ${user.uid.substring(0,8)}...`;
+
+                    // 프로필 동기화
+                    const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                    
+                    onSnapshot(userRef, (snap) => {
+                        if (snap.exists()) {
+                            userData = snap.data();
+                            updatePointsUI();
+                            document.getElementById('settingsNickname').innerText = userData.nickname || '작가';
+                        } else {
+                            // 신규 계정 프로필 생성
+                            const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
+                            const newProfile = { 
+                                points: 1250, 
+                                nickname: defaultNick, 
+                                email: user.email || 'guest',
+                                createdAt: Date.now() 
+                            };
+                            setDoc(userRef, newProfile);
+                            pendingSignupNickname = '';
+                        }
+                    }, (err) => console.error("Profile sync error:", err));
+
+                    // 실시간 Firestore 데이터 구독
+                    subscribeAuctions();
+                    subscribeMyDrawings();
+                } else {
+                    // 로그아웃 상태 처리
+                    document.getElementById('view-login').classList.remove('hidden');
+                    document.getElementById('appHeader').classList.add('hidden');
+                    document.getElementById('appHeader').classList.remove('flex');
+                    document.getElementById('appMain').classList.add('hidden');
+                    document.getElementById('appNav').classList.add('hidden');
+                    document.getElementById('appNav').classList.remove('flex');
+                }
+            });
+        }
+
+        // 1) 이메일 로그인 처리
+        async function handleEmailLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('btnEmailLogin');
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 로그인 중...`;
+
+            const { auth, signInWithEmailAndPassword } = window.FB;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                showToast("반갑습니다! 로그인되었습니다.");
+            } catch (error) {
+                console.error("Login error:", error);
+                showToast("이메일 또는 비밀번호가 올바르지 않습니다.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `로그인`;
+            }
+        }
+
+        // 2) 이메일 회원가입 처리
+        async function handleEmailSignup(e) {
+            e.preventDefault();
+            const nickname = document.getElementById('signupNickname').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const btn = document.getElementById('btnEmailSignup');
+
+            if (!nickname) return showToast("닉네임을 입력해 주세요.");
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 계정 생성 중...`;
+            pendingSignupNickname = nickname;
+
+            const { auth, createUserWithEmailAndPassword } = window.FB;
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                showToast("회원가입이 완료되었습니다!");
+            } catch (error) {
+                console.error("Signup error:", error);
+                if (error.code === 'auth/email-already-in-use') {
+                    showToast("이미 사용 중인 이메일입니다.");
+                } else {
+                    showToast("회원가입 중 오류가 발생했습니다.");
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `계정 만들기`;
+            }
+        }
+
+        // 3) 구글 로그인 처리
+        async function handleGoogleLogin() {
+            const { auth, GoogleAuthProvider, signInWithPopup } = window.FB;
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+                showToast("Google 계정으로 로그인되었습니다.");
+            } catch (error) {
+                console.error("Google auth error:", error);
+                showToast("Google 로그인 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 4) 게스트/익명 로그인 처리
+        async function handleGuestLogin() {
+            const { auth, signInAnonymously } = window.FB;
+            try {
+                await signInAnonymously(auth);
+                showToast("게스트 모드로 접속했습니다.");
+            } catch (error) {
+                console.error("Guest auth error:", error);
+                showToast("접속 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 로그아웃 처리
+        function showLogoutModal() {
+            document.getElementById('logoutModal').classList.remove('hidden');
+        }
+        async function executeLogout() {
+            document.getElementById('logoutModal').classList.add('hidden');
+            const { auth, signOut } = window.FB;
+            try {
+                await signOut(auth);
+                showToast("안전하게 로그아웃 되었습니다.");
+            } catch(e) { console.error(e); }
+        }
+
+        // Firestore 실시간 경매 데이터 구독 및 마감 타이머 로직 처리
+        function subscribeAuctions() {
+            const { db, appId, collection, onSnapshot } = window.FB;
+            const auctionsRef = collection(db, 'artifacts', appId, 'public', 'data', 'auctions');
+            
+            onSnapshot(auctionsRef, (snapshot) => {
+                auctionItemsList = [];
+                const now = Date.now();
+                
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const id = docSnap.id;
+
+                    if (data.status !== 'closed') {
+                        // 6시간 경과 여부 체크
+                        const isExpired = (now - data.lastBidTime) >= SIX_HOURS_MS;
+                        
+                        if (isExpired) {
+                            // [낙찰 처리]
+                            if (data.highestBidderUid === currentUser.uid) {
+                                processAuctionWin(id, data);
+                            }
+                            // [유찰 처리]
+                            else if (!data.highestBidderUid && data.artistUid === currentUser.uid) {
+                                processAuctionFail(id, data);
+                            }
+                        } else {
+                            auctionItemsList.push({ id, ...data });
+                        }
+                    }
+                });
+                
+                auctionItemsList.sort((a, b) => b.createdAt - a.createdAt);
+                if (document.getElementById('view-auction').classList.contains('hidden') === false) {
+                    renderAuctions();
+                }
+            }, (err) => console.error("Auction Subscribe Error:", err));
+        }
+
+        // 경매 낙찰 성공 처리
+        async function processAuctionWin(auctionId, data) {
+            const { db, appId, doc, updateDoc, addDoc, collection } = window.FB;
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed' });
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'purchased'), {
+                    title: data.title,
+                    image: data.image,
+                    artist: data.artist,
+                    price: data.currentBid,
+                    createdAt: Date.now()
+                });
+                showAlertModal('낙찰 성공!', `축하합니다!\n[${data.title}] 작품의 입찰 대기 6시간이 종료되어 최종 낙찰받았습니다.\n내 갤러리에서 확인해보세요.`, '🎉');
+            } catch(e) { console.error("Win process error", e); }
+        }
+
+        // 경매 유찰 처리
+        async function processAuctionFail(auctionId, data) {
+            const { db, appId, doc, updateDoc, addDoc, collection } = window.FB;
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed' });
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings'), {
+                    title: data.title,
+                    image: data.image,
+                    createdAt: Date.now()
+                });
+                showAlertModal('경매 유찰 안내', `[${data.title}] 작품이 입찰자 없이 6시간이 경과하여 경매가 종료되었습니다.\n내 보관함으로 다시 반환되었습니다.`, '🕰️');
+            } catch(e) { console.error("Fail process error", e); }
+        }
+
+        // Firestore 실시간 내 그림 데이터 구독
+        function subscribeMyDrawings() {
+            if(!currentUser) return;
+            const { db, appId, collection, onSnapshot } = window.FB;
+            const drawingsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings');
+            
+            onSnapshot(drawingsRef, (snapshot) => {
+                myDrawingsList = [];
+                snapshot.forEach(docSnap => myDrawingsList.push({ id: docSnap.id, ...docSnap.data() }));
+                myDrawingsList.sort((a, b) => b.createdAt - a.createdAt);
+                renderGallery();
+            }, (err) => console.error("Drawings Subscribe Error:", err));
+        }
+
+        // 그림 보관함 저장 + [100P 지급]
+        async function saveCanvasToGallery() {
+            if (!currentUser) return showToast("연결 중입니다. 잠시 후 다시 시도해주세요.");
+            const { db, appId, collection, addDoc, doc, updateDoc } = window.FB;
+            
+            const dataUrl = canvas.toDataURL('image/png');
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings'), {
+                    title: `나의 픽클 작품 #${myDrawingsList.length + 1}`,
+                    image: dataUrl,
+                    createdAt: Date.now()
+                });
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), {
+                    points: userData.points + 100
+                });
+                showToast('내 보관함에 작품이 저장되었습니다! 창작 보상 +100P');
+            } catch (e) {
+                console.error(e);
+                showToast('저장 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 실시간 경매 등록 + [100P 지급]
+        async function submitAuction() {
+            if (!currentUser) return;
+            const { db, appId, collection, addDoc, doc, updateDoc } = window.FB;
+            
+            const title = document.getElementById('auctionTitle').value.trim() || '무제 피클';
+            const price = parseInt(document.getElementById('auctionPrice').value) || 100;
+            const dataUrl = canvas.toDataURL('image/png');
+            const now = Date.now();
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'auctions'), {
+                    title: title,
+                    artist: userData.nickname || '작가',
+                    artistUid: currentUser.uid,
+                    currentBid: price,
+                    bidsCount: 0,
+                    image: dataUrl,
+                    createdAt: now,
+                    lastBidTime: now,
+                    status: 'active',
+                    highestBidderUid: null
+                });
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), {
+                    points: userData.points + 100
+                });
+
+                closeAuctionModal();
+                switchTab('auction');
+                showToast('성공적으로 출품되었습니다! 창작 보상 +100P');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // 입찰 진행
+        async function placeBid(id, currentBid) {
+            if (!currentUser) return;
+            const { db, appId, doc, updateDoc } = window.FB;
+            
+            const targetAuction = auctionItemsList.find(a => a.id === id);
+            if (!targetAuction) return;
+
+            if (targetAuction.artistUid === currentUser.uid) {
+                return showToast('본인이 출품한 작품에는 입찰할 수 없습니다.');
+            }
+
+            if (Date.now() - targetAuction.lastBidTime >= SIX_HOURS_MS) {
+                return showToast('입찰 시간이 이미 마감된 경매입니다.');
+            }
+
+            const nextBid = currentBid + 50;
+            if (userData.points < 50) return showToast('포인트(P)가 부족합니다! 출석체크를 진행하세요.');
+
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await updateDoc(userDocRef, {
+                    points: userData.points - 50
+                });
+
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', id), {
+                    currentBid: nextBid,
+                    bidsCount: (targetAuction.bidsCount || 0) + 1,
+                    highestBidder: userData.nickname || '작가',
+                    highestBidderUid: currentUser.uid,
+                    lastBidTime: Date.now()
+                });
+                
+                showToast(`🎉 ${nextBid}P 로 입찰에 성공했습니다!`);
+            } catch (e) {
+                console.error(e);
+                showToast("입찰 처리 중 오류가 발생했습니다.");
+            }
+        }
+
+        // 일일 출석체크 보상
+        async function claimDailyReward() {
+            if (!currentUser) return;
+            const { db, appId, doc, updateDoc } = window.FB;
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await updateDoc(userDocRef, {
+                    points: userData.points + 100
+                });
+                const btn = document.getElementById('checkInBtn');
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> 오늘 출석 완료`;
+                btn.classList.add('opacity-80');
+                showToast('출석 보상 100P가 지급되었습니다!');
+            } catch (e) { console.error(e); }
+        }
+
+        // 닉네임 변경 
+        function changeNickname() {
+            document.getElementById('nicknameModal').classList.remove('hidden');
+            document.getElementById('newNicknameInput').value = userData.nickname || '';
+        }
+        async function saveNickname() {
+            if (!currentUser) return;
+            const newName = document.getElementById('newNicknameInput').value.trim();
+            if(!newName) return;
+
+            const { db, appId, doc, updateDoc } = window.FB;
+            try {
+                const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await updateDoc(userDocRef, {
+                    nickname: newName
+                });
+                document.getElementById('nicknameModal').classList.add('hidden');
+                showToast('닉네임이 성공적으로 변경되었습니다!');
+            } catch(e) { console.error(e); }
+        }
+
+        // 실시간 경매 UI 렌더링
+        function renderAuctions() {
+            const container = document.getElementById('auctionList');
+            container.innerHTML = '';
+            
+            if (auctionItemsList.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-400 font-bold bg-white rounded-3xl border border-dashed border-slate-200">현재 진행 중인 경매가 없습니다.<br>첫 작품을 그려서 출품해 보세요!</div>`;
+                return;
+            }
+
+            const now = Date.now();
+
+            auctionItemsList.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-white border border-slate-100 rounded-3xl p-4 shadow-soft space-y-3';
+                
+                const remainingMs = (item.lastBidTime + SIX_HOURS_MS) - now;
+                let timeBadge = '';
+                
+                if (remainingMs > 0) {
+                    const hrs = Math.floor(remainingMs / (1000 * 60 * 60));
+                    const mins = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+                    timeBadge = `<span class="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                                    <i class="fa-regular fa-clock text-amber-400"></i> ${hrs}시간 ${mins}분 남음
+                                </span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="relative rounded-2xl overflow-hidden bg-slate-50 flex items-center justify-center min-h-[200px]">
+                        <img src="${item.image}" class="w-full h-48 object-cover rounded-2xl">
+                        ${timeBadge}
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-slate-800 text-base">${item.title}</h3>
+                            <span class="text-xs font-semibold text-slate-400">by ${item.artist}</span>
+                        </div>
+                        <div class="mt-2 flex justify-between items-end bg-slate-50 p-3 rounded-2xl">
+                            <div>
+                                <span class="text-[10px] font-bold text-slate-400 block">현재 최고 입찰가 (${item.bidsCount || 0}회 입찰)</span>
+                                <span class="text-lg font-black text-rose-500">${item.currentBid} <span class="text-xs font-bold">P</span></span>
+                                ${item.highestBidder ? `<span class="block text-[10px] text-slate-500 mt-0.5">최고 입찰자: <b>${item.highestBidder}</b></span>` : ''}
+                            </div>
+                            <button onclick="placeBid('${item.id}', ${item.currentBid})" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-500/30 active:scale-95 transition-transform flex items-center gap-1.5">
+                                <i class="fa-solid fa-gavel"></i> 입찰 (+50P)
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        let activeGalleryTab = 'my-drawings';
+        function switchGalleryTab(tab) {
+            activeGalleryTab = tab;
+            document.getElementById('tab-my-drawings').className = tab === 'my-drawings' ? 'flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm' : 'flex-1 py-2 rounded-xl text-slate-500';
+            document.getElementById('tab-purchased').className = tab === 'purchased' ? 'flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm' : 'flex-1 py-2 rounded-xl text-slate-500';
+            renderGallery();
+        }
+
+        function renderGallery() {
+            document.getElementById('unSoldCnt').innerText = myDrawingsList.length;
+            document.getElementById('purchasedCnt').innerText = purchasedArtList.length;
+
+            const container = document.getElementById('galleryGrid');
+            container.innerHTML = '';
+            const list = activeGalleryTab === 'my-drawings' ? myDrawingsList : purchasedArtList;
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center py-8 text-xs text-slate-400">보관된 작품이 없습니다.</div>`;
+                return;
+            }
+
+            list.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-white border border-slate-100 rounded-2xl p-2.5 shadow-sm space-y-2';
+                card.innerHTML = `
+                    <div class="w-full h-32 rounded-xl bg-slate-50 overflow-hidden flex items-center justify-center">
+                        <img src="${item.image}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="px-1">
+                        <h4 class="font-bold text-xs text-slate-800 truncate">${item.title}</h4>
+                        <p class="text-[10px] text-slate-400">${activeGalleryTab === 'my-drawings' ? '보관중' : '소장품'}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updatePointsUI() {
+            document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
+        }
+
+        // 탭 스위처 및 타이머 정리 로직
+        function switchTab(tabName) {
+            const views = ['home', 'draw', 'auction', 'gallery', 'settings'];
+            views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-emerald-500');
+                btn.classList.add('text-slate-400');
+            });
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            if(activeNav) {
+                activeNav.classList.remove('text-slate-400');
+                activeNav.classList.add('text-emerald-500');
+            }
+
+            if (tabName === 'auction') {
+                renderAuctions();
+                clearInterval(auctionTimerInterval);
+                auctionTimerInterval = setInterval(renderAuctions, 60000); 
+            } else {
+                clearInterval(auctionTimerInterval);
+            }
+        }
+
+        // ====== 캔버스 및 픽셀화 그래픽 툴 핵심 로직 ====== //
+        function initCanvas() {
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', drawing); window.addEventListener('mouseup', stopDraw);
+            canvas.addEventListener('touchstart', (e)=>{e.preventDefault(); startDraw(e)}, {passive: false});
+            canvas.addEventListener('touchmove', (e)=>{e.preventDefault(); drawing(e)}, {passive: false});
+            window.addEventListener('touchend', stopDraw);
+        }
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX = e.clientX, clientY = e.clientY;
+            if(e.touches && e.touches.length > 0) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
+            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+        }
+        function startDraw(e) {
+            if (tfImgObj) return; // 이미지 변환 중에는 그리기 금지
+            isDrawing = true; const pos = getCoordinates(e); startX = pos.x; startY = pos.y;
+            ctx.beginPath(); ctx.moveTo(startX, startY);
+            ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
+            ctx.lineWidth = currentLineWidth; ctx.lineCap = 'round';
+            snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        }
+        function drawing(e) {
+            if(!isDrawing || tfImgObj) return;
+            const pos = getCoordinates(e);
+            if(currentTool === 'pen' || currentTool === 'eraser') { ctx.lineTo(pos.x, pos.y); ctx.stroke(); }
+            else if (currentTool === 'rect') { ctx.putImageData(snapshot, 0, 0); ctx.strokeRect(startX, startY, pos.x - startX, pos.y - startY); }
+            else if (currentTool === 'circle') {
+                ctx.putImageData(snapshot, 0, 0); ctx.beginPath();
+                ctx.arc(startX, startY, Math.sqrt(Math.pow(pos.x - startX, 2) + Math.pow(pos.y - startY, 2)), 0, 2 * Math.PI); ctx.stroke();
+            }
+        }
+        function stopDraw() { isDrawing = false; }
+        function clearCanvas() { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => { btn.classList.remove('bg-emerald-500', 'text-white'); btn.classList.add('bg-white', 'text-slate-600'); });
+            document.getElementById(`tool-${tool}`).classList.replace('bg-white', 'bg-emerald-500');
+            document.getElementById(`tool-${tool}`).classList.replace('text-slate-600', 'text-white');
+        }
+        function changeColor(c) { currentColor = c; document.getElementById('colorPicker').value = c; }
+        function changeLineWidth(v) { currentLineWidth = v; }
+        
+        // 픽셀화 해상도 개선 (pixelSize 8 -> 3으로 감소하여 훨씬 디테일하게) 및 변환 모드 진입
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const pixelSize = 3; 
+                    let w = img.width;
+                    let h = img.height;
+                    
+                    // 최대 가로 사이즈 지정 (픽셀 아트 비율 유지)
+                    const maxW = 240; 
+                    if (w > maxW) {
+                        h = h * (maxW / w);
+                        w = maxW;
+                    }
+
+                    const offCanvas = document.createElement('canvas'); 
+                    const offCtx = offCanvas.getContext('2d');
+                    offCanvas.width = w / pixelSize; 
+                    offCanvas.height = h / pixelSize;
+                    offCtx.drawImage(img, 0, 0, offCanvas.width, offCanvas.height);
+                    
+                    const pCanvas = document.createElement('canvas');
+                    pCanvas.width = w;
+                    pCanvas.height = h;
+                    const pCtx = pCanvas.getContext('2d');
+                    pCtx.imageSmoothingEnabled = false; // 안티앨리어싱 제거로 픽셀 유지
+                    pCtx.drawImage(offCanvas, 0, 0, offCanvas.width, offCanvas.height, 0, 0, w, h);
+
+                    const finalImg = new Image();
+                    finalImg.onload = function() {
+                        // 위치 및 크기 조절 오버레이 모드로 진입
+                        tfImgObj = finalImg;
+                        tfX = (canvas.width - finalImg.width) / 2;
+                        tfY = (canvas.height - finalImg.height) / 2;
+                        tfScale = 1;
+                        document.getElementById('imgScaleSlider').value = 1;
+                        
+                        overlayCanvas.classList.remove('hidden');
+                        document.getElementById('imageTransformUI').classList.remove('hidden');
+                        renderOverlayCanvas();
+                    };
+                    finalImg.src = pCanvas.toDataURL('image/png');
+                }
+                img.src = event.target.result;
+                e.target.value = ''; // 재업로드를 위해 초기화
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // 이미지 위치/크기 조절 드래그 컨트롤 로직
+        function setupImageTransformEvents() {
+            const slider = document.getElementById('imgScaleSlider');
+
+            function getOvlPos(e) {
+                const rect = overlayCanvas.getBoundingClientRect();
+                let cx = e.touches ? e.touches[0].clientX : e.clientX;
+                let cy = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: (cx - rect.left) * (overlayCanvas.width / rect.width),
+                    y: (cy - rect.top) * (overlayCanvas.height / rect.height)
+                };
+            }
+
+            function startDrag(e) {
+                if (!tfImgObj) return;
+                const pos = getOvlPos(e);
+                const imgW = tfImgObj.width * tfScale;
+                const imgH = tfImgObj.height * tfScale;
+                // 터치 위치가 이미지 영역 내부인지 확인
+                if (pos.x >= tfX && pos.x <= tfX + imgW && pos.y >= tfY && pos.y <= tfY + imgH) {
+                    isTfDragging = true;
+                    tfStartX = pos.x - tfX;
+                    tfStartY = pos.y - tfY;
+                    e.preventDefault();
+                }
+            }
+            function doDrag(e) {
+                if (!isTfDragging || !tfImgObj) return;
+                e.preventDefault();
+                const pos = getOvlPos(e);
+                tfX = pos.x - tfStartX;
+                tfY = pos.y - tfStartY;
+                renderOverlayCanvas();
+            }
+            function endDrag() { isTfDragging = false; }
+
+            overlayCanvas.addEventListener('mousedown', startDrag);
+            overlayCanvas.addEventListener('mousemove', doDrag);
+            window.addEventListener('mouseup', endDrag);
+
+            overlayCanvas.addEventListener('touchstart', startDrag, {passive: false});
+            overlayCanvas.addEventListener('touchmove', doDrag, {passive: false});
+            window.addEventListener('touchend', endDrag);
+
+            slider.addEventListener('input', (e) => {
+                tfScale = parseFloat(e.target.value);
+                renderOverlayCanvas();
+            });
+        }
+
+        // 오버레이 캔버스에 드래그 중인 이미지 그리기
+        function renderOverlayCanvas() {
+            oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            if (tfImgObj) {
+                // 반투명 배경 및 가이드라인
+                oCtx.fillStyle = 'rgba(241, 245, 249, 0.4)';
+                oCtx.fillRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                
+                oCtx.imageSmoothingEnabled = false;
+                const finalW = tfImgObj.width * tfScale;
+                const finalH = tfImgObj.height * tfScale;
+
+                // 점선 테두리
+                oCtx.strokeStyle = '#10b981';
+                oCtx.lineWidth = 2;
+                oCtx.setLineDash([5, 5]);
+                oCtx.strokeRect(tfX, tfY, finalW, finalH);
+                oCtx.setLineDash([]);
+                
+                // 이미지 드로우
+                oCtx.drawImage(tfImgObj, tfX, tfY, finalW, finalH);
+            }
+        }
+
+        // 위치 고정: 메인 캔버스에 도장 찍기
+        function confirmImageTransform() {
+            if (tfImgObj) {
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(tfImgObj, tfX, tfY, tfImgObj.width * tfScale, tfImgObj.height * tfScale);
+                showToast("캔버스에 이미지가 도장처럼 찍혔습니다!");
+            }
+            closeTransformMode();
+        }
+
+        // 위치 지정 취소
+        function cancelImageTransform() {
+            closeTransformMode();
+        }
+
+        // 오버레이 모드 종료 함수
+        function closeTransformMode() {
+            tfImgObj = null;
+            overlayCanvas.classList.add('hidden');
+            document.getElementById('imageTransformUI').classList.add('hidden');
+            oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        }
+
+        // 모달 제어
+        function openAuctionModalFromCanvas() {
+            if(!currentUser) return showToast("연결 중입니다. 잠시만 기다려주세요.");
+            document.getElementById('modalImagePreview').innerHTML = `<img src="${canvas.toDataURL('image/png')}" class="w-full h-full object-cover rounded-2xl">`;
+            document.getElementById('auctionModal').classList.remove('hidden');
+        }
+        function closeAuctionModal() { document.getElementById('auctionModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
