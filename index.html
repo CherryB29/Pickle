@@ -38,7 +38,8 @@
             deleteDoc,
             onSnapshot, 
             updateDoc, 
-            getDoc 
+            getDoc,
+            getDocs
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -60,7 +61,7 @@
             auth, db, appId, signInAnonymously, createUserWithEmailAndPassword, 
             signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, 
             signOut, onAuthStateChanged, collection, doc, setDoc, getDoc, 
-            addDoc, deleteDoc, onSnapshot, updateDoc
+            getDocs, addDoc, deleteDoc, onSnapshot, updateDoc
         };
     </script>
 
@@ -103,15 +104,60 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         #toast {
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            transform: translate(-50%, -20px);
+            transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translate(-50%, -10px) scale(0.95);
             opacity: 0;
             pointer-events: none;
+            width: max-content;
+            max-width: 85%;
         }
         #toast.show {
-            transform: translate(-50%, 0);
+            transform: translate(-50%, 0) scale(1);
             opacity: 1;
         }
+
+        /* 2D 컬러 피커 영역 스타일 */
+        #colorArea {
+            position: relative;
+            width: 100%;
+            height: 160px;
+            border-radius: 12px;
+            overflow: hidden;
+            touch-action: none;
+            background-color: #ff0000;
+        }
+        #colorHue {
+            width: 100%;
+            height: 24px;
+            border-radius: 12px;
+            background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+            margin-top: 12px;
+            touch-action: none;
+            position: relative;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .picker-thumb {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2.5px solid white;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        .hue-thumb {
+            position: absolute;
+            width: 8px;
+            height: 28px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        
     </style>
 </head>
 <body class="bg-slate-100 relative">
@@ -184,7 +230,7 @@
             </div>
         </section>
 
-        <!-- 헤더 (모든 탭 공통) -->
+        <!-- 헤더 -->
         <header id="appHeader" class="hidden sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 justify-between items-center flex-shrink-0">
             <div class="flex items-center gap-2 cursor-pointer" onclick="switchTab('home')">
                 <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-md">🥒</div>
@@ -192,12 +238,10 @@
             </div>
             
             <div class="flex items-center gap-1.5">
-                <!-- 에스크로(묶인 돈) 표시 -->
                 <div class="bg-rose-50 px-2.5 py-1.5 rounded-full flex items-center gap-1 border border-rose-100 cursor-pointer" onclick="showToast('현재 입찰 진행 중이라 사용이 묶여있는 예치금입니다.')">
                     <i class="fa-solid fa-lock text-rose-400 text-[10px]"></i>
                     <span id="lockedPoints" class="font-bold text-[11px] text-rose-600">0</span>
                 </div>
-                <!-- 사용 가능 돈 표시 -->
                 <div class="bg-emerald-50 hover:bg-emerald-100 transition-colors px-3 py-1.5 rounded-full flex items-center gap-1 border border-emerald-200/60 cursor-pointer" onclick="showToast('자유롭게 사용할 수 있는 보유 포인트입니다.')">
                     <i class="fa-solid fa-coins text-amber-500 text-xs"></i>
                     <span id="userPoints" class="font-bold text-sm text-emerald-900">...</span>
@@ -246,8 +290,8 @@
                 </div>
             </section>
 
-            <!-- 2. DRAWING STUDIO -->
-            <section id="view-draw" class="hidden absolute inset-0 px-4 pt-3 pb-24 flex flex-col overflow-y-auto no-scrollbar bg-slate-50">
+            <!-- 2. DRAWING STUDIO (모바일 반응형 높이 제약 완벽 해결) -->
+            <section id="view-draw" class="hidden absolute inset-0 px-4 pt-3 pb-20 flex flex-col overflow-y-auto no-scrollbar bg-slate-50">
                 <div class="flex justify-between items-center mb-2 flex-shrink-0">
                     <h2 class="text-lg font-bold text-slate-800">스튜디오</h2>
                     <div class="flex gap-1.5">
@@ -257,60 +301,87 @@
                     </div>
                 </div>
 
-                <!-- 반응형 캔버스 (max-h-[50vh] 적용하여 긴 화면에서 툴바 공간 보장) -->
-                <div class="w-full min-h-0 relative mb-2 flex justify-center items-center flex-shrink-0 max-h-[50vh]">
-                    <div class="relative bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-shrink-0 aspect-square w-full h-full max-h-full mx-auto">
-                        <canvas id="paintCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair"></canvas>
-                        <canvas id="overlayCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden"></canvas>
+                <!-- 캔버스 영역 (비율 왜곡 및 겹침 해결을 위한 레이아웃 적용) -->
+                <div class="flex-1 w-full flex items-center justify-center min-h-0 mb-3 overflow-hidden">
+                    <!-- 종횡비 1:1 유지 및 부모 크기 안 넘어가게 -->
+                    <div style="aspect-ratio: 1 / 1; max-height: 100%; max-width: 100%;" class="relative bg-white border-2 border-slate-200 rounded-2xl shadow-sm flex-shrink-0 w-full">
+                        <canvas id="paintCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
+                        <canvas id="overlayCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
 
-                        <!-- 오버레이 UI -->
-                        <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-xl flex flex-col gap-2 z-30 hidden border border-slate-200">
-                            <input type="text" id="tfTextInput" placeholder="텍스트 입력 후 박스 모서리를 드래그..." class="hidden w-full px-2 py-1.5 text-xs font-bold border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 bg-slate-50">
-                            <div class="flex gap-2">
+                        <!-- 변환 조절 플로팅 UI -->
+                        <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-xl flex flex-col gap-1.5 z-30 hidden border border-slate-200">
+                            <input type="text" id="tfTextInput" placeholder="텍스트 입력 (직접 모서리 드래그)" class="hidden w-full px-2 py-1.5 text-xs font-bold border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 bg-slate-50">
+                            <div class="flex gap-2 mt-1">
                                 <button onclick="cancelImageTransform()" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-[11px] font-bold active:scale-95">취소</button>
-                                <button onclick="confirmImageTransform()" class="flex-1 py-2 bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow-md active:scale-95"><i class="fa-solid fa-stamp"></i> 도장 찍기</button>
+                                <button onclick="confirmImageTransform()" class="flex-[2] py-2 bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow-md active:scale-95"><i class="fa-solid fa-stamp"></i> 도장 찍기</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 그리기 도구 툴바 -->
-                <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2.5 flex-shrink-0">
-                    <div class="grid grid-cols-7 gap-1.5">
-                        <button onclick="setTool('pen')" id="tool-pen" class="tool-btn py-2.5 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow-sm flex flex-col items-center justify-center gap-1 active:scale-95"><i class="fa-solid fa-pen text-sm"></i></button>
-                        <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95"><i class="fa-solid fa-eraser text-sm"></i></button>
-                        <button onclick="setTool('bucket')" id="tool-bucket" class="tool-btn py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95"><i class="fa-solid fa-fill-drip text-sm"></i></button>
-                        <button onclick="activateTransformMode('rect')" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95"><i class="fa-regular fa-square text-sm"></i></button>
-                        <button onclick="activateTransformMode('circle')" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95"><i class="fa-regular fa-circle text-sm"></i></button>
-                        <button onclick="activateTransformMode('text')" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95"><i class="fa-solid fa-font text-sm"></i></button>
-                        <label class="py-2.5 bg-purple-50 text-purple-600 border border-purple-100 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 active:scale-95 cursor-pointer">
+                <!-- 툴바 영역 (flex-wrap으로 가로 스크롤 이슈 및 팝업 잘림 해결) -->
+                <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2.5 flex-shrink-0 relative">
+                    <!-- 도구 모음 -->
+                    <div class="flex flex-wrap items-center justify-center gap-1.5">
+                        <button onclick="setTool('pen')" id="tool-pen" class="tool-btn w-10 h-10 bg-emerald-500 text-white rounded-xl text-[10px] font-bold shadow-sm flex items-center justify-center active:scale-95 flex-shrink-0"><i class="fa-solid fa-pen text-sm"></i></button>
+                        <button onclick="setTool('eraser')" id="tool-eraser" class="tool-btn w-10 h-10 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold flex items-center justify-center active:scale-95 flex-shrink-0"><i class="fa-solid fa-eraser text-sm"></i></button>
+                        <button onclick="setTool('bucket')" id="tool-bucket" class="tool-btn w-10 h-10 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold flex items-center justify-center active:scale-95 flex-shrink-0"><i class="fa-solid fa-fill-drip text-sm"></i></button>
+                        
+                        <!-- 통합 도형 툴 오버레이 -->
+                        <div class="relative flex items-center justify-center flex-shrink-0">
+                            <button onclick="toggleShapeMenu(event)" id="tool-shape" class="tool-btn w-10 h-10 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 active:scale-95 flex-shrink-0">
+                                <i class="fa-solid fa-shapes text-sm"></i>
+                            </button>
+                            <div id="shapeMenu" class="hidden absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 bg-white border border-slate-200 shadow-xl rounded-xl p-2 flex gap-1 z-[100]">
+                                <button onclick="activateTransformMode('line')" class="w-9 h-9 flex items-center justify-center bg-slate-50 hover:bg-emerald-50 rounded-lg text-slate-600 hover:text-emerald-500 active:scale-90"><i class="fa-solid fa-minus text-sm"></i></button>
+                                <button onclick="activateTransformMode('rect')" class="w-9 h-9 flex items-center justify-center bg-slate-50 hover:bg-emerald-50 rounded-lg text-slate-600 hover:text-emerald-500 active:scale-90"><i class="fa-regular fa-square text-sm"></i></button>
+                                <button onclick="activateTransformMode('circle')" class="w-9 h-9 flex items-center justify-center bg-slate-50 hover:bg-emerald-50 rounded-lg text-slate-600 hover:text-emerald-500 active:scale-90"><i class="fa-regular fa-circle text-sm"></i></button>
+                                <button onclick="activateTransformMode('triangle')" class="w-9 h-9 flex items-center justify-center bg-slate-50 hover:bg-emerald-50 rounded-lg text-slate-600 hover:text-emerald-500 active:scale-90"><i class="fa-solid fa-caret-up text-sm"></i></button>
+                            </div>
+                        </div>
+
+                        <button onclick="activateTransformMode('text')" class="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-bold flex items-center justify-center active:scale-95 flex-shrink-0"><i class="fa-solid fa-font text-sm"></i></button>
+                        <label class="w-16 h-10 bg-purple-50 text-purple-600 border border-purple-100 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 active:scale-95 cursor-pointer flex-shrink-0">
                             <i class="fa-solid fa-image text-sm"></i>
                             <input type="file" id="imageLoader" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
                         </label>
                     </div>
-                    <div class="flex justify-between items-center pt-1">
-                        <div class="flex items-center gap-1.5">
-                            <input type="color" id="colorPicker" value="#000000" onchange="changeColor(this.value)" class="w-7 h-7 rounded-full border-0 cursor-pointer p-0">
-                            <div class="flex gap-1">
-                                <button onclick="changeColor('#000000')" class="w-5 h-5 rounded-full bg-black border border-slate-300 active:scale-90"></button>
-                                <button onclick="changeColor('#ef4444')" class="w-5 h-5 rounded-full bg-red-500 active:scale-90"></button>
-                                <button onclick="changeColor('#3b82f6')" class="w-5 h-5 rounded-full bg-blue-500 active:scale-90"></button>
-                                <button onclick="changeColor('#22c55e')" class="w-5 h-5 rounded-full bg-emerald-500 active:scale-90"></button>
-                            </div>
+                    
+                    <!-- 선/투명도 조절 영역 (2줄 레이아웃) -->
+                    <div class="flex items-center gap-3 pt-2 border-t border-slate-100 mt-1">
+                        <!-- 컬러 피커 트리거 버튼 -->
+                        <div class="flex items-center justify-center gap-1.5 cursor-pointer bg-slate-50 px-2 py-2 rounded-xl active:scale-95 border border-slate-200 flex-shrink-0 h-[46px]" onclick="openColorPicker()">
+                            <div id="toolbarColorPreview" class="w-6 h-6 rounded-full border border-slate-300 shadow-inner" style="background-color: #000000; opacity: 1;"></div>
+                            <i class="fa-solid fa-caret-down text-slate-400 text-[10px]"></i>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-ruler-horizontal text-xs text-slate-400"></i>
-                            <input type="range" id="lineWidth" min="1" max="30" value="4" onchange="changeLineWidth(this.value)" class="w-20 accent-emerald-500">
+                        
+                        <div class="flex-1 flex flex-col justify-center gap-2.5">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle text-[8px] text-slate-400 w-4 text-center"></i>
+                                <input type="range" id="lineWidth" min="1" max="50" value="4" onchange="changeLineWidth(this.value)" class="flex-1 accent-emerald-500 h-1.5">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-droplet-slash text-[10px] text-slate-400 w-4 text-center"></i>
+                                <input type="range" id="lineOpacity" min="0" max="1" step="0.05" value="1" onchange="changeOpacity(this.value)" class="flex-1 accent-emerald-500 h-1.5">
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex gap-2 my-3 flex-shrink-0">
-                    <button onclick="saveCanvasToGallery()" class="flex-1 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-download"></i> 보관함 저장
+                <!-- 하단 버튼들 (상황에 따라 JS에서 교체) -->
+                <div id="studioNormalBtns" class="flex gap-2 mt-3 flex-shrink-0">
+                    <button onclick="saveCanvasToGallery()" class="flex-1 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-[11px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-download text-sm"></i> 보관함 저장
                     </button>
-                    <button onclick="openAuctionModalFromCanvas()" class="flex-[1.5] py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-500/20 active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-gavel"></i> 경매 출품 (+100P)
+                    <button onclick="openAuctionModalFromCanvas()" class="flex-[1.5] py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-[11px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-gavel text-sm"></i> 경매 출품
+                    </button>
+                </div>
+                
+                <!-- 프로필 적용용 전용 버튼 -->
+                <div id="studioProfileBtns" class="hidden flex-col gap-2 mt-3 flex-shrink-0">
+                    <button onclick="setProfilePicture()" class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-[13px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-id-badge text-sm"></i> 내 프로필 사진으로 적용하기
                     </button>
                 </div>
             </section>
@@ -351,13 +422,22 @@
                 <h2 class="text-xl font-bold text-slate-800">계정 및 설정</h2>
                 
                 <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-inner">🥒</div>
+                    <div class="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group active:scale-95 transition-transform" onclick="prepareProfileDrawing()">
+                        <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl font-bold shadow-inner relative overflow-hidden">
+                            <div id="settingsProfileImg" class="w-full h-full flex items-center justify-center">🥒</div>
+                            <div class="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="fa-solid fa-pen text-white text-sm"></i>
+                            </div>
+                        </div>
+                        <p class="text-[9px] font-bold text-slate-400 text-center">눌러서 편집</p>
+                    </div>
+                    
                     <div class="flex-1 overflow-hidden">
                         <h3 class="font-bold text-slate-800 text-base flex items-center">
                             <span id="settingsNickname" class="truncate">작가</span>
                             <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full ml-2 flex-shrink-0">Artist</span>
                         </h3>
-                        <p id="settingsUid" class="text-[11px] text-slate-400 mt-1 font-mono truncate">ID: ...</p>
+                        <p id="settingsAccount" class="text-[11px] text-slate-400 mt-1 font-mono truncate">계정 정보 불러오는 중...</p>
                     </div>
                 </div>
 
@@ -365,10 +445,6 @@
                     <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="changeNickname()">
                         <span class="font-semibold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-user-pen text-emerald-500 w-5"></i> 닉네임 변경</span>
                         <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>
-                    </div>
-                    <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="showToast('서비스 상태 정상')">
-                        <span class="font-semibold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-sky-500 w-5"></i> 보안 및 앱 상태</span>
-                        <span class="text-xs text-emerald-500 font-bold">안전함</span>
                     </div>
                     <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-rose-50 transition-colors text-rose-500 font-bold" onclick="showLogoutModal()">
                         <span class="flex items-center gap-2"><i class="fa-solid fa-right-from-bracket w-5"></i> 로그아웃</span>
@@ -398,6 +474,47 @@
             </button>
         </nav>
 
+    </div>
+
+    <!-- 색상 선택 커스텀 모달 (2D Color Picker 최적화) -->
+    <div id="colorPickerModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-[320px] w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center mb-1">
+                <h3 class="font-extrabold text-lg text-slate-800">색상 및 즐겨찾기</h3>
+                <button onclick="closeColorPicker()" class="text-slate-400 text-xl active:scale-90"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div id="cpPreview" class="w-12 h-12 rounded-xl shadow-inner border border-slate-200" style="background-color: #000000;"></div>
+                <div class="flex-1">
+                    <p id="cpHex" class="text-sm font-bold text-slate-700 font-mono">#000000</p>
+                    <button onclick="addFavColor()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-600 px-2 py-1.5 rounded-lg mt-1 font-bold active:scale-95 transition-colors"><i class="fa-solid fa-star"></i> 즐겨찾기 추가</button>
+                </div>
+            </div>
+
+            <!-- 2D 컬러 피커 (채도/명도) -->
+            <div class="space-y-1 pt-2 border-t border-slate-100">
+                <div id="colorArea">
+                    <!-- 색상 그라데이션 캔버스 -->
+                    <canvas id="colorCanvas" class="w-full h-full"></canvas>
+                    <div id="colorThumb" class="picker-thumb"></div>
+                </div>
+                <!-- 색조(Hue) 조절 바 -->
+                <div id="colorHue">
+                    <div id="hueThumb" class="hue-thumb" style="left: 0%;"></div>
+                </div>
+            </div>
+
+            <!-- 즐겨찾기 색상 리스트 -->
+            <div class="pt-3 border-t border-slate-100">
+                <p class="text-[10px] font-bold text-slate-500 mb-2">즐겨찾는 색상 (클릭하여 선택)</p>
+                <div id="favColorsContainer" class="flex flex-wrap gap-2">
+                    <!-- JS 렌더링 -->
+                </div>
+            </div>
+
+            <button onclick="applyColorPicker()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md active:scale-95 transition-transform mt-2">이 색상 사용하기</button>
+        </div>
     </div>
 
     <!-- 경매 출품 모달 -->
@@ -481,17 +598,17 @@
         </div>
     </div>
 
-    <!-- 토스트 알림 -->
-    <div id="toast" class="fixed top-20 left-1/2 z-[100] bg-slate-800 text-white px-5 py-3 rounded-full text-sm font-bold shadow-2xl flex items-center gap-2">
-        <i class="fa-solid fa-circle-info text-emerald-400"></i>
-        <span id="toastMsg">메시지</span>
+    <!-- 토스트 알림 (모던 UI 개편) -->
+    <div id="toast" class="fixed top-20 left-1/2 z-[100] bg-slate-800/95 backdrop-blur-sm text-white px-5 py-3 rounded-2xl text-[13px] font-medium shadow-2xl flex items-center gap-2 border border-slate-700 break-keep">
+        <i class="fa-solid fa-circle-check text-emerald-400 flex-shrink-0 text-base"></i>
+        <span id="toastMsg" class="leading-tight text-left">메시지</span>
     </div>
 
     <!-- JS LOGIC -->
     <script>
         // 전역 상태 변수
         let currentUser = null;
-        let userData = { points: 1250, lockedPoints: 0, nickname: '작가', lastCheckInDate: '' };
+        let userData = { points: 1250, lockedPoints: 0, nickname: '작가', lastCheckInDate: '', profileImage: '' };
         let pendingSignupNickname = '';
         
         let myDrawingsList = [];
@@ -502,7 +619,9 @@
 
         // 캔버스 도구 변수
         let currentTool = 'pen';
-        let currentColor = '#000000';
+        let baseColor = '#000000';
+        let currentOpacity = 1;
+        let currentColor = 'rgba(0, 0, 0, 1)';
         let currentLineWidth = 4;
         let isDrawing = false, startX = 0, startY = 0, snapshot = null;
         let pendingGalleryAuctionImage = null; 
@@ -514,16 +633,24 @@
         let undoStack = [];
         let redoStack = [];
 
-        // 오버레이 변수
+        // 오버레이 및 도형/회전 변수
         const overlayCanvas = document.getElementById('overlayCanvas');
         const oCtx = overlayCanvas.getContext('2d', { willReadFrequently: true });
         let tfMode = null;
         let tfX = 50, tfY = 50, tfW = 100, tfH = 100;
+        let tfAngle = 0; 
         let tfImgObj = null;
         let tfText = "텍스트";
+        
+        // 선(Line) 전용 편집 변수
+        let lineStartX = 50, lineStartY = 50, lineEndX = 150, lineEndY = 150;
+
         let isTfDragging = false;
         let tfAction = null;
         let lastTfPos = {x: 0, y: 0};
+
+        // 색상 즐겨찾기 관련 변수
+        let favColors = ['#000000', '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
 
         // UI & 헬퍼 함수
         function showToast(msg) {
@@ -568,11 +695,23 @@
             return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         }
 
+        function hexToRgbaStr(hex, alpha) {
+            let r = parseInt(hex.slice(1, 3), 16);
+            let g = parseInt(hex.slice(3, 5), 16);
+            let b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
         // 앱 초기화
         window.addEventListener('load', () => {
             initCanvas();
             setupImageTransformEvents();
+            renderFavColors();
+            initColorPicker(); 
             
+            window.addEventListener('mousedown', closeShapeMenuOut);
+            window.addEventListener('touchstart', closeShapeMenuOut, {passive: true});
+
             const checkFB = setInterval(() => {
                 if (window.FB && window.FB.auth) {
                     clearInterval(checkFB);
@@ -595,18 +734,25 @@
                     document.getElementById('appNav').classList.remove('hidden');
                     document.getElementById('appNav').classList.add('flex');
 
+                    let emailText = user.email || '게스트 계정';
+                    document.getElementById('settingsAccount').innerText = emailText;
+
                     const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
                     onSnapshot(userRef, (snap) => {
                         if (snap.exists()) {
                             userData = snap.data();
                             updatePointsUI();
                             document.getElementById('settingsNickname').innerText = userData.nickname || '작가';
-                            document.getElementById('settingsUid').innerText = `ID: ${user.uid.substring(0,8)}...`;
                             checkCheckInStatus();
+                            
+                            if (userData.profileImage) {
+                                document.getElementById('settingsProfileImg').innerHTML = `<img src="${userData.profileImage}" class="w-full h-full object-cover">`;
+                            } else {
+                                document.getElementById('settingsProfileImg').innerHTML = `🥒`;
+                            }
                         } else {
                             const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
-                            // 에스크로 기능에 맞춰 lockedPoints 필드 추가
-                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '' };
+                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '' };
                             setDoc(userRef, newProfile);
                             pendingSignupNickname = '';
                         }
@@ -666,7 +812,10 @@
             try {
                 await window.FB.createUserWithEmailAndPassword(window.FB.auth, email, password);
                 showToast("회원가입이 완료되었습니다!");
-            } catch (err) { showToast("회원가입 중 오류가 발생했습니다."); } 
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') showToast("이미 사용 중인 이메일입니다.");
+                else showToast("회원가입 중 오류가 발생했습니다.");
+            } 
             finally { btn.disabled = false; btn.innerHTML = `계정 만들기`; }
         }
 
@@ -714,30 +863,20 @@
             }, err => console.error(err));
         }
 
-        // 낙찰 성공 시 (예치금 차감 및 원작자 수익금 지급)
         async function processAuctionWin(auctionId, data) {
             const { db, appId, doc, updateDoc, addDoc, getDoc, collection } = window.FB;
             try {
-                // 경매 마감 처리
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed' });
-                
-                // 1. 최고 입찰자(나)의 묶인 예치금을 완전히 차감
                 const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                await updateDoc(myRef, {
-                    lockedPoints: Math.max(0, (userData.lockedPoints || 0) - data.currentBid)
-                });
+                await updateDoc(myRef, { lockedPoints: Math.max(0, (userData.lockedPoints || 0) - data.currentBid) });
 
-                // 2. 작품 원작자에게 수익금 지급
                 const artistRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'profile', 'data');
                 const artistSnap = await getDoc(artistRef);
                 if(artistSnap.exists()) {
                     const artistData = artistSnap.data();
-                    await updateDoc(artistRef, {
-                        points: (artistData.points || 0) + data.currentBid
-                    });
+                    await updateDoc(artistRef, { points: (artistData.points || 0) + data.currentBid });
                 }
 
-                // 3. 소장품 추가 및 알림
                 await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'purchased'), {
                     title: data.title, image: data.image, artist: data.artist, price: data.currentBid, createdAt: Date.now()
                 });
@@ -814,6 +953,62 @@
             } catch (e) { showToast('저장 중 오류가 발생했습니다.'); }
         }
 
+        window.setProfileFromGallery = async function(image) {
+            if (!currentUser) return showToast("연결 대기 중입니다.");
+            const { db, appId, doc, updateDoc, collection, getDocs } = window.FB;
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), {
+                    profileImage: image
+                });
+
+                // 내 출품작 작가 이미지 일괄 업데이트
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'auctions'));
+                snap.forEach(d => {
+                    if(d.data().artistUid === currentUser.uid) {
+                        updateDoc(d.ref, { artistProfileImage: image });
+                    }
+                });
+
+                showToast('프로필 사진이 멋지게 변경되었습니다!');
+            } catch (e) {
+                showToast('프로필 설정 중 오류가 발생했습니다.');
+            }
+        };
+
+        window.prepareProfileDrawing = function() {
+            switchTab('draw');
+            document.getElementById('studioNormalBtns').style.display = 'none';
+            document.getElementById('studioProfileBtns').style.display = 'flex';
+            document.getElementById('studioProfileBtns').classList.remove('hidden');
+            showToast('나만의 멋진 프로필 사진을 캔버스에 직접 그려보세요!');
+        };
+
+        window.setProfilePicture = async function() {
+            if (!currentUser) return showToast("연결 대기 중입니다.");
+            if (undoStack.length <= 1) return showToast("프로필로 사용할 그림을 캔버스에 먼저 그려주세요!");
+
+            const { db, appId, doc, updateDoc, collection, getDocs } = window.FB;
+            const dataUrl = canvas.toDataURL('image/png');
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), {
+                    profileImage: dataUrl
+                });
+
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'auctions'));
+                snap.forEach(d => {
+                    if(d.data().artistUid === currentUser.uid) {
+                        updateDoc(d.ref, { artistProfileImage: dataUrl });
+                    }
+                });
+
+                showToast('프로필 사진이 멋지게 변경되었습니다!');
+                switchTab('settings');
+                clearCanvas();
+            } catch (e) {
+                showToast('프로필 설정 중 오류가 발생했습니다.');
+            }
+        };
+
         async function submitAuction() {
             if (!currentUser) return;
             const { db, appId, collection, addDoc, doc, updateDoc, deleteDoc } = window.FB;
@@ -824,7 +1019,9 @@
 
             try {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'auctions'), {
-                    title, artist: userData.nickname || '작가', artistUid: currentUser.uid, currentBid: price, bidsCount: 0,
+                    title, artist: userData.nickname || '작가', artistUid: currentUser.uid, 
+                    artistProfileImage: userData.profileImage || null,
+                    currentBid: price, bidsCount: 0,
                     image: dataUrl, createdAt: now, lastBidTime: now, status: 'active', highestBidderUid: null,
                     likes: []
                 });
@@ -851,17 +1048,17 @@
             document.getElementById('auctionModal').classList.remove('hidden');
         };
 
-        window.deleteMyDrawing = async function(docId, title) {
-            if (!confirm(`[${title}] 작품을 보관함에서 삭제하시겠습니까?`)) return;
+        window.deleteMyDrawing = async function(docId, title, isPurchased) {
+            if (!confirm(`[${title}] 작품을 ${isPurchased ? '소장품에서' : '보관함에서'} 삭제하시겠습니까?`)) return;
             if (!currentUser) return;
             const { db, appId, doc, deleteDoc } = window.FB;
             try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings', docId));
+                const collectionName = isPurchased ? 'purchased' : 'drawings';
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, collectionName, docId));
                 showToast("작품이 삭제되었습니다.");
             } catch(e) { showToast("삭제 중 오류가 발생했습니다."); }
         };
 
-        // 입찰 진행 시 에스크로(환불 및 예치) 로직 적용
         async function placeBid(id, currentBidAmount) {
             if (!currentUser) return;
             const { db, appId, doc, getDoc, updateDoc } = window.FB;
@@ -877,7 +1074,6 @@
             const prevBidderUid = targetAuction.highestBidderUid;
 
             try {
-                // 1. 이전 최고 입찰자가 있다면 환불 (묶인 돈 감소, 보유 돈 증가)
                 if (prevBidderUid) {
                     const prevUserRef = doc(db, 'artifacts', appId, 'users', prevBidderUid, 'profile', 'data');
                     const prevUserSnap = await getDoc(prevUserRef);
@@ -890,14 +1086,12 @@
                     }
                 }
 
-                // 2. 나의 포인트 예치 처리 (보유 돈 감소, 묶인 돈 증가)
                 const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
                 await updateDoc(myRef, {
                     points: userData.points - nextBid,
                     lockedPoints: (userData.lockedPoints || 0) + nextBid
                 });
 
-                // 3. 경매 정보 갱신
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', id), {
                     currentBid: nextBid, 
                     bidsCount: (targetAuction.bidsCount || 0) + 1, 
@@ -907,7 +1101,7 @@
                 });
                 
                 showToast(`🎉 ${nextBid}P 로 입찰 완료!\n입찰금액이 예치금으로 전환되었습니다.`);
-            } catch (e) { console.error(e); showToast("입찰 처리 중 오류가 발생했습니다."); }
+            } catch (e) { showToast("입찰 처리 중 오류가 발생했습니다."); }
         }
 
         async function claimDailyReward() {
@@ -928,12 +1122,24 @@
             document.getElementById('nicknameModal').classList.remove('hidden');
             document.getElementById('newNicknameInput').value = userData.nickname || '';
         }
+        
         async function saveNickname() {
             if (!currentUser) return;
             const newName = document.getElementById('newNicknameInput').value.trim();
             if(!newName) return;
+            
+            const { db, appId, doc, updateDoc, collection, getDocs } = window.FB;
+            
             try {
-                await window.FB.updateDoc(window.FB.doc(window.FB.db, 'artifacts', window.FB.appId, 'users', currentUser.uid, 'profile', 'data'), { nickname: newName });
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { nickname: newName });
+                
+                const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'auctions'));
+                snap.forEach(d => {
+                    if(d.data().artistUid === currentUser.uid) {
+                        updateDoc(d.ref, { artist: newName });
+                    }
+                });
+
                 document.getElementById('nicknameModal').classList.add('hidden');
                 showToast('닉네임이 변경되었습니다!');
             } catch(e){}
@@ -970,6 +1176,10 @@
 
                 const isLiked = item.likes && currentUser ? item.likes.includes(currentUser.uid) : false;
                 const likeCount = item.likes ? item.likes.length : 0;
+                
+                const profileImgHtml = item.artistProfileImage 
+                    ? `<img src="${item.artistProfileImage}" class="w-full h-full object-cover">`
+                    : `<span class="text-[8px] flex items-center justify-center h-full w-full">🥒</span>`;
 
                 const card = document.createElement('div');
                 card.className = 'bg-white border border-slate-100 rounded-3xl p-4 shadow-soft space-y-3';
@@ -989,7 +1199,12 @@
                         <div class="flex justify-between items-start mt-1">
                             <div class="flex-1 truncate pr-2">
                                 <h3 class="font-bold text-slate-800 text-base truncate">${item.title}</h3>
-                                <span class="text-[11px] font-semibold text-slate-400 block truncate">by ${item.artist}</span>
+                                <div class="flex items-center gap-1 mt-0.5">
+                                    <div class="w-4 h-4 rounded-full bg-emerald-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
+                                        ${profileImgHtml}
+                                    </div>
+                                    <span class="text-[11px] font-semibold text-slate-400 block truncate">by ${item.artist}</span>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-3 flex justify-between items-end bg-slate-50 p-3 rounded-2xl">
@@ -1039,7 +1254,21 @@
                             <button onclick="openAuctionModalFromGallery('${item.id}', '${item.title.replace(/'/g, "\\'")}', '${item.image}')" class="flex-1 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-1">
                                 <i class="fa-solid fa-gavel"></i> 출품
                             </button>
-                            <button onclick="deleteMyDrawing('${item.id}', '${item.title.replace(/'/g, "\\'")}')" class="py-1.5 px-2 bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-lg text-[10px] font-bold active:scale-95 transition-colors">
+                            <button onclick="setProfileFromGallery('${item.image}')" class="py-1.5 px-2 bg-slate-100 hover:bg-emerald-50 text-slate-400 hover:text-emerald-500 rounded-lg text-[10px] font-bold active:scale-95 transition-colors" title="프로필로 설정">
+                                <i class="fa-solid fa-id-badge"></i>
+                            </button>
+                            <button onclick="deleteMyDrawing('${item.id}', '${item.title.replace(/'/g, "\\'")}', false)" class="py-1.5 px-2 bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-lg text-[10px] font-bold active:scale-95 transition-colors" title="삭제">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionButtons = `
+                        <div class="flex gap-1 pt-1">
+                            <button onclick="setProfileFromGallery('${item.image}')" class="flex-1 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-[10px] font-bold shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-id-badge"></i> 프로필로 설정
+                            </button>
+                            <button onclick="deleteMyDrawing('${item.id}', '${item.title.replace(/'/g, "\\'")}', true)" class="py-1.5 px-2 bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-lg text-[10px] font-bold active:scale-95 transition-colors" title="삭제">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
@@ -1062,7 +1291,6 @@
             });
         }
 
-        // 상단 포인트(에스크로, 사용가능) UI 렌더링
         function updatePointsUI() {
             document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
             document.getElementById('lockedPoints').innerText = (userData.lockedPoints || 0).toLocaleString();
@@ -1081,15 +1309,165 @@
                 activeNav.classList.remove('text-slate-400'); activeNav.classList.add('text-emerald-500');
             }
 
+            if (tabName === 'draw') {
+                document.getElementById('studioNormalBtns').style.display = 'flex';
+                document.getElementById('studioProfileBtns').style.display = 'none';
+            }
+
             if (tabName === 'auction') {
                 renderAuctions(); clearInterval(auctionTimerInterval); auctionTimerInterval = setInterval(renderAuctions, 60000); 
             } else { clearInterval(auctionTimerInterval); }
         }
 
         // ========================================== //
-        // ====== 캔버스 스튜디오 핵심 로직 시작 ====== //
+        // ====== 커스텀 컬러 피커 및 스튜디오 핵심 로직 ====== //
         // ========================================== //
         
+        let cpCanvas, cpCtx;
+        let isColorDragging = false;
+        let currentHue = 0; 
+
+        function initColorPicker() {
+            cpCanvas = document.getElementById('colorCanvas');
+            cpCtx = cpCanvas.getContext('2d', {willReadFrequently: true});
+            
+            cpCanvas.addEventListener('mousedown', (e) => { isColorDragging = true; selectColor(e); });
+            window.addEventListener('mousemove', (e) => { if(isColorDragging) selectColor(e); });
+            window.addEventListener('mouseup', () => { isColorDragging = false; });
+            
+            cpCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); isColorDragging = true; selectColor(e); }, {passive: false});
+            window.addEventListener('touchmove', (e) => { if(isColorDragging) selectColor(e); }, {passive: false});
+            window.addEventListener('touchend', () => { isColorDragging = false; });
+
+            const hueArea = document.getElementById('colorHue');
+            let isHueDragging = false;
+            hueArea.addEventListener('mousedown', (e) => { isHueDragging = true; selectHue(e); });
+            window.addEventListener('mousemove', (e) => { if(isHueDragging) selectHue(e); });
+            window.addEventListener('mouseup', () => { isHueDragging = false; });
+
+            hueArea.addEventListener('touchstart', (e) => { e.preventDefault(); isHueDragging = true; selectHue(e); }, {passive: false});
+            window.addEventListener('touchmove', (e) => { if(isHueDragging) selectHue(e); }, {passive: false});
+            window.addEventListener('touchend', () => { isHueDragging = false; });
+        }
+
+        function drawColorArea() {
+            const w = cpCanvas.width;
+            const h = cpCanvas.height;
+            cpCtx.clearRect(0, 0, w, h);
+
+            cpCtx.fillStyle = `hsl(${currentHue}, 100%, 50%)`;
+            cpCtx.fillRect(0, 0, w, h);
+
+            const whiteGrad = cpCtx.createLinearGradient(0, 0, w, 0);
+            whiteGrad.addColorStop(0, 'rgba(255,255,255,1)');
+            whiteGrad.addColorStop(1, 'rgba(255,255,255,0)');
+            cpCtx.fillStyle = whiteGrad;
+            cpCtx.fillRect(0, 0, w, h);
+
+            const blackGrad = cpCtx.createLinearGradient(0, 0, 0, h);
+            blackGrad.addColorStop(0, 'rgba(0,0,0,0)');
+            blackGrad.addColorStop(1, 'rgba(0,0,0,1)');
+            cpCtx.fillStyle = blackGrad;
+            cpCtx.fillRect(0, 0, w, h);
+        }
+
+        function selectColor(e) {
+            const rect = cpCanvas.getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            let x = clientX - rect.left;
+            let y = clientY - rect.top;
+            x = Math.max(0, Math.min(x, rect.width));
+            y = Math.max(0, Math.min(y, rect.height));
+
+            const thumb = document.getElementById('colorThumb');
+            thumb.style.left = `${(x / rect.width) * 100}%`;
+            thumb.style.top = `${(y / rect.height) * 100}%`;
+
+            const scaleX = cpCanvas.width / rect.width;
+            const scaleY = cpCanvas.height / rect.height;
+            const imgData = cpCtx.getImageData(x * scaleX, y * scaleY, 1, 1).data;
+            
+            let hex = "#" + (1 << 24 | imgData[0] << 16 | imgData[1] << 8 | imgData[2]).toString(16).slice(1);
+            document.getElementById('cpHex').innerText = hex;
+            document.getElementById('cpPreview').style.backgroundColor = hex;
+            thumb.style.backgroundColor = hex;
+        }
+
+        function selectHue(e) {
+            const rect = document.getElementById('colorHue').getBoundingClientRect();
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let x = clientX - rect.left;
+            x = Math.max(0, Math.min(x, rect.width));
+
+            const percent = x / rect.width;
+            currentHue = percent * 360;
+            
+            document.getElementById('hueThumb').style.left = `${percent * 100}%`;
+            document.getElementById('colorArea').style.backgroundColor = `hsl(${currentHue}, 100%, 50%)`; 
+            drawColorArea();
+            
+            const cThumb = document.getElementById('colorThumb');
+            let thumbXPercent = parseFloat(cThumb.style.left) / 100 || 1;
+            let thumbYPercent = parseFloat(cThumb.style.top) / 100 || 0;
+            
+            const imgData = cpCtx.getImageData(thumbXPercent * cpCanvas.width, thumbYPercent * cpCanvas.height, 1, 1).data;
+            let hex = "#" + (1 << 24 | imgData[0] << 16 | imgData[1] << 8 | imgData[2]).toString(16).slice(1);
+            
+            document.getElementById('cpHex').innerText = hex;
+            document.getElementById('cpPreview').style.backgroundColor = hex;
+            cThumb.style.backgroundColor = hex;
+        }
+
+        window.openColorPicker = function() {
+            document.getElementById('colorPickerModal').classList.remove('hidden');
+            renderFavColors();
+            setTimeout(() => {
+                cpCanvas.width = document.getElementById('colorArea').offsetWidth;
+                cpCanvas.height = document.getElementById('colorArea').offsetHeight;
+                drawColorArea();
+                
+                document.getElementById('colorThumb').style.left = '100%';
+                document.getElementById('colorThumb').style.top = '0%';
+                document.getElementById('colorThumb').style.backgroundColor = `hsl(${currentHue}, 100%, 50%)`;
+            }, 50);
+        };
+        window.closeColorPicker = function() { document.getElementById('colorPickerModal').classList.add('hidden'); };
+
+        window.addFavColor = function() {
+            let hex = document.getElementById('cpHex').innerText;
+            if(!favColors.includes(hex)) {
+                favColors.push(hex);
+                if(favColors.length > 14) favColors.shift();
+                renderFavColors();
+                showToast("즐겨찾기에 추가되었습니다.");
+            }
+        };
+
+        window.selectFavColor = function(hex) {
+            document.getElementById('cpHex').innerText = hex;
+            document.getElementById('cpPreview').style.backgroundColor = hex;
+        };
+
+        window.applyColorPicker = function() {
+            baseColor = document.getElementById('cpHex').innerText;
+            currentColor = hexToRgbaStr(baseColor, currentOpacity);
+            
+            document.getElementById('toolbarColorPreview').style.backgroundColor = baseColor;
+            document.getElementById('toolbarColorPreview').style.opacity = currentOpacity;
+            closeColorPicker();
+            renderOverlayCanvas();
+        };
+
+        function renderFavColors() {
+            const container = document.getElementById('favColorsContainer');
+            container.innerHTML = '';
+            favColors.forEach(c => {
+                container.innerHTML += `<button onclick="selectFavColor('${c}')" class="w-6 h-6 rounded-full border border-slate-300 shadow-sm active:scale-90" style="background-color: ${c};"></button>`;
+            });
+        }
+
         function initCanvas() {
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             saveState(); 
@@ -1100,25 +1478,38 @@
             window.addEventListener('touchend', stopDraw);
         }
 
+        window.toggleShapeMenu = function(e) {
+            e.stopPropagation();
+            document.getElementById('shapeMenu').classList.toggle('hidden');
+        };
+
+        function closeShapeMenuOut(e) {
+            const menu = document.getElementById('shapeMenu');
+            const btn = document.getElementById('tool-shape');
+            if(menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        }
+
         function saveState() {
             undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
             redoStack = []; 
             if (undoStack.length > 20) undoStack.shift(); 
         }
-        function undo() {
+        window.undo = function() {
             if (undoStack.length > 1) {
                 redoStack.push(undoStack.pop());
                 ctx.putImageData(undoStack[undoStack.length - 1], 0, 0);
             } else { showToast("더 이상 되돌릴 수 없습니다."); }
-        }
-        function redo() {
+        };
+        window.redo = function() {
             if (redoStack.length > 0) {
                 const state = redoStack.pop();
                 undoStack.push(state);
                 ctx.putImageData(state, 0, 0);
             }
-        }
-        function clearCanvas() { 
+        };
+        window.clearCanvas = function() { 
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); 
             undoStack = [];
             redoStack = [];
@@ -1135,37 +1526,34 @@
             };
         }
 
-        function hexToRgba(hex) {
-            let r = parseInt(hex.slice(1, 3), 16);
-            let g = parseInt(hex.slice(3, 5), 16);
-            let b = parseInt(hex.slice(5, 7), 16);
-            return [r, g, b, 255];
-        }
-
-        function floodFill(x, y, fillColorHex) {
+        function floodFill(x, y, fillColorStr) {
             x = Math.round(x); y = Math.round(y);
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
-            const targetColor = hexToRgba(fillColorHex);
+            
+            const rgbaMatch = fillColorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+            if(!rgbaMatch) return;
+            const targetColor = [parseInt(rgbaMatch[1]), parseInt(rgbaMatch[2]), parseInt(rgbaMatch[3]), Math.round((parseFloat(rgbaMatch[4]) || 1) * 255)];
+
             const startPos = (y * canvas.width + x) * 4;
-            const startR = data[startPos];
-            const startG = data[startPos+1];
-            const startB = data[startPos+2];
-            const startA = data[startPos+3];
+            const startR = data[startPos], startG = data[startPos+1], startB = data[startPos+2], startA = data[startPos+3];
 
-            if (startR === targetColor[0] && startG === targetColor[1] && startB === targetColor[2]) return;
+            if (startR === targetColor[0] && startG === targetColor[1] && startB === targetColor[2] && startA === targetColor[3]) return;
 
+            const tolerance = 60; 
             const matchStartColor = (pos) => {
-                return data[pos] === startR && data[pos+1] === startG && data[pos+2] === startB && data[pos+3] === startA;
+                return Math.abs(data[pos] - startR) <= tolerance &&
+                       Math.abs(data[pos+1] - startG) <= tolerance &&
+                       Math.abs(data[pos+2] - startB) <= tolerance &&
+                       Math.abs(data[pos+3] - startA) <= tolerance;
             };
 
             const colorPixel = (pos) => {
-                data[pos] = targetColor[0]; data[pos+1] = targetColor[1]; data[pos+2] = targetColor[2]; data[pos+3] = 255;
+                data[pos] = targetColor[0]; data[pos+1] = targetColor[1]; data[pos+2] = targetColor[2]; data[pos+3] = targetColor[3];
             };
 
             const pixelStack = [[x, y]];
-            const w = canvas.width;
-            const h = canvas.height;
+            const w = canvas.width, h = canvas.height;
 
             while (pixelStack.length) {
                 const newPos = pixelStack.pop();
@@ -1177,8 +1565,7 @@
                 pixelPos += w * 4;
                 ++py;
 
-                let reachLeft = false;
-                let reachRight = false;
+                let reachLeft = false, reachRight = false;
 
                 while (py++ < h && matchStartColor(pixelPos)) {
                     colorPixel(pixelPos);
@@ -1224,38 +1611,51 @@
             if(isDrawing) { isDrawing = false; saveState(); } 
         }
 
-        function setTool(tool) {
+        window.setTool = function(tool) {
             currentTool = tool;
             document.querySelectorAll('.tool-btn').forEach(btn => { btn.classList.remove('bg-emerald-500', 'text-white'); btn.classList.add('bg-slate-100', 'text-slate-600'); });
             document.getElementById(`tool-${tool}`).classList.replace('bg-slate-100', 'bg-emerald-500');
             document.getElementById(`tool-${tool}`).classList.replace('text-slate-600', 'text-white');
-        }
-        function changeColor(c) { currentColor = c; document.getElementById('colorPicker').value = c; renderOverlayCanvas(); }
-        function changeLineWidth(v) { currentLineWidth = parseFloat(v); renderOverlayCanvas(); }
+        };
         
-        function activateTransformMode(mode) {
+        window.changeLineWidth = function(v) { currentLineWidth = parseFloat(v); renderOverlayCanvas(); };
+        window.changeOpacity = function(v) { 
+            currentOpacity = parseFloat(v); 
+            currentColor = hexToRgbaStr(baseColor, currentOpacity);
+            document.getElementById('toolbarColorPreview').style.opacity = currentOpacity;
+            renderOverlayCanvas();
+        };
+        
+        window.activateTransformMode = function(mode) {
             tfMode = mode;
-            tfX = 130; tfY = 130; tfW = 100; tfH = 100;
+            tfAngle = 0;
             
             const txtInput = document.getElementById('tfTextInput');
             if (mode === 'text') {
+                tfX = 130; tfY = 130; tfW = 100; tfH = 40;
                 txtInput.classList.remove('hidden');
                 tfText = txtInput.value || "텍스트";
-                tfH = 40; 
+            } else if (mode === 'line') {
+                lineStartX = 50; lineStartY = 50; lineEndX = 250; lineEndY = 250;
+                txtInput.classList.add('hidden');
             } else {
+                tfX = 130; tfY = 130; tfW = 100; tfH = 100;
                 txtInput.classList.add('hidden');
             }
             
+            document.getElementById('shapeMenu').classList.add('hidden');
+            if(mode !== 'text' && mode !== 'image') setTool('shape');
+
             overlayCanvas.classList.remove('hidden');
             document.getElementById('imageTransformUI').classList.remove('hidden');
             renderOverlayCanvas();
-        }
+        };
 
         document.getElementById('tfTextInput').addEventListener('input', (e) => {
             if(tfMode === 'text') { tfText = e.target.value; renderOverlayCanvas(); }
         });
 
-        function handleImageUpload(e) {
+        window.handleImageUpload = function(e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -1264,8 +1664,11 @@
                 img.onload = function() {
                     const pixelSize = 3; 
                     let w = img.width, h = img.height;
-                    const maxW = 240; 
-                    if (w > maxW) { h = h * (maxW / w); w = maxW; }
+                    
+                    const maxDim = 240; 
+                    let scale = Math.min(maxDim / w, maxDim / h, 1);
+                    w = w * scale; 
+                    h = h * scale;
 
                     const offCanvas = document.createElement('canvas'); const offCtx = offCanvas.getContext('2d');
                     offCanvas.width = w / pixelSize; offCanvas.height = h / pixelSize;
@@ -1282,6 +1685,7 @@
                         tfW = finalImg.width; tfH = finalImg.height;
                         tfX = (canvas.width - tfW) / 2; tfY = (canvas.height - tfH) / 2;
                         tfMode = 'image';
+                        tfAngle = 0; 
                         document.getElementById('tfTextInput').classList.add('hidden');
                         
                         overlayCanvas.classList.remove('hidden');
@@ -1294,12 +1698,23 @@
                 e.target.value = ''; 
             }
             reader.readAsDataURL(file);
-        }
+        };
 
         function getHandleHit(x, y) {
-            const hSize = 15; 
+            const hSize = 20; 
             const hit = (hx, hy) => Math.abs(x - hx) <= hSize && Math.abs(y - hy) <= hSize;
             
+            if (tfMode === 'line') {
+                if (hit(lineStartX, lineStartY)) return 'line_start';
+                if (hit(lineEndX, lineEndY)) return 'line_end';
+                const d = Math.abs((lineEndX - lineStartX)*(lineStartY - y) - (lineStartX - x)*(lineEndY - lineStartY)) / Math.sqrt(Math.pow(lineEndX - lineStartX, 2) + Math.pow(lineEndY - lineStartY, 2));
+                if (d < 10) return 'move';
+                return null;
+            }
+
+            // 도형 회전 핸들은 도형 위쪽 중앙에 위치
+            if (hit(tfX + tfW/2, tfY - 30)) return 'rotate';
+
             if (hit(tfX, tfY)) return 'tl';
             if (hit(tfX + tfW/2, tfY)) return 'tc';
             if (hit(tfX + tfW, tfY)) return 'tr';
@@ -1324,32 +1739,65 @@
             function startTfDrag(e) {
                 if (!tfMode) return;
                 const pos = getOvlPos(e);
-                tfAction = getHandleHit(pos.x, pos.y);
+                
+                let checkX = pos.x; let checkY = pos.y;
+                if (tfMode !== 'line' && tfAngle !== 0) {
+                    const cx = tfX + tfW/2; const cy = tfY + tfH/2;
+                    const rad = -tfAngle * Math.PI / 180;
+                    checkX = cx + (pos.x - cx)*Math.cos(rad) - (pos.y - cy)*Math.sin(rad);
+                    checkY = cy + (pos.x - cx)*Math.sin(rad) + (pos.y - cy)*Math.cos(rad);
+                }
+
+                tfAction = getHandleHit(checkX, checkY);
                 if (tfAction) {
                     isTfDragging = true; 
-                    lastTfPos = pos;
+                    lastTfPos = {x: checkX, y: checkY, realX: pos.x, realY: pos.y};
                     e.preventDefault();
                 }
             }
+
             function doTfDrag(e) {
                 if (!isTfDragging || !tfMode) return; e.preventDefault();
                 const pos = getOvlPos(e); 
-                const dx = pos.x - lastTfPos.x;
-                const dy = pos.y - lastTfPos.y;
 
-                if (tfAction === 'move') {
+                if (tfMode === 'line') {
+                    const dx = pos.x - lastTfPos.realX;
+                    const dy = pos.y - lastTfPos.realY;
+                    if (tfAction === 'line_start') { lineStartX = pos.x; lineStartY = pos.y; }
+                    else if (tfAction === 'line_end') { lineEndX = pos.x; lineEndY = pos.y; }
+                    else if (tfAction === 'move') { lineStartX += dx; lineStartY += dy; lineEndX += dx; lineEndY += dy; }
+                    lastTfPos = {realX: pos.x, realY: pos.y};
+                    renderOverlayCanvas();
+                    return;
+                }
+
+                if (tfAction === 'rotate') {
+                    const cx = tfX + tfW/2; const cy = tfY + tfH/2;
+                    const angleRad = Math.atan2(pos.y - cy, pos.x - cx);
+                    tfAngle = (angleRad * 180 / Math.PI) + 90; 
+                } else if (tfAction === 'move') {
+                    const dx = pos.x - lastTfPos.realX;
+                    const dy = pos.y - lastTfPos.realY;
                     tfX += dx; tfY += dy;
                 } else {
+                    const cx = tfX + tfW/2; const cy = tfY + tfH/2;
+                    const rad = -tfAngle * Math.PI / 180;
+                    let nx = cx + (pos.x - cx)*Math.cos(rad) - (pos.y - cy)*Math.sin(rad);
+                    let ny = cy + (pos.x - cx)*Math.sin(rad) + (pos.y - cy)*Math.cos(rad);
+                    
+                    const dx = nx - lastTfPos.x; const dy = ny - lastTfPos.y;
+                    
                     let newX = tfX, newY = tfY, newW = tfW, newH = tfH;
                     if (tfAction.includes('l')) { newX += dx; newW -= dx; }
                     if (tfAction.includes('r')) { newW += dx; }
                     if (tfAction.includes('t')) { newY += dy; newH -= dy; }
                     if (tfAction.includes('b')) { newH += dy; }
 
-                    if (newW >= 20) { tfX = newX; tfW = newW; }
-                    if (newH >= 20) { tfY = newY; tfH = newH; }
+                    if (newW >= 10) { tfX = newX; tfW = newW; }
+                    if (newH >= 10) { tfY = newY; tfH = newH; }
+                    lastTfPos.x = nx; lastTfPos.y = ny;
                 }
-                lastTfPos = pos;
+                lastTfPos.realX = pos.x; lastTfPos.realY = pos.y;
                 renderOverlayCanvas();
             }
             function endTfDrag() { isTfDragging = false; tfAction = null; }
@@ -1358,72 +1806,117 @@
             overlayCanvas.addEventListener('touchstart', startTfDrag, {passive: false}); overlayCanvas.addEventListener('touchmove', doTfDrag, {passive: false}); window.addEventListener('touchend', endTfDrag);
         }
 
+        function drawTransformedObject(ctxTarget) {
+            ctxTarget.save();
+
+            if (tfMode === 'line') {
+                ctxTarget.strokeStyle = currentColor; ctxTarget.lineWidth = currentLineWidth;
+                ctxTarget.beginPath();
+                ctxTarget.moveTo(lineStartX, lineStartY);
+                ctxTarget.lineTo(lineEndX, lineEndY);
+                ctxTarget.stroke();
+                ctxTarget.restore();
+                return;
+            }
+
+            const cx = tfX + tfW/2; const cy = tfY + tfH/2;
+            ctxTarget.translate(cx, cy);
+            ctxTarget.rotate(tfAngle * Math.PI / 180);
+            
+            let lx = -tfW/2; let ly = -tfH/2;
+
+            if (tfMode === 'image' && tfImgObj) {
+                ctxTarget.imageSmoothingEnabled = false;
+                ctxTarget.drawImage(tfImgObj, lx, ly, tfW, tfH);
+            } else if (tfMode === 'rect') {
+                ctxTarget.strokeRect(lx, ly, tfW, tfH);
+            } else if (tfMode === 'circle') {
+                ctxTarget.beginPath();
+                ctxTarget.ellipse(0, 0, tfW/2, tfH/2, 0, 0, 2 * Math.PI);
+                ctxTarget.stroke();
+            } else if (tfMode === 'triangle') {
+                ctxTarget.beginPath();
+                ctxTarget.moveTo(0, ly);
+                ctxTarget.lineTo(tfW/2, tfH/2);
+                ctxTarget.lineTo(lx, tfH/2);
+                ctxTarget.closePath();
+                ctxTarget.stroke();
+            } else if (tfMode === 'text') {
+                ctxTarget.fillStyle = currentColor;
+                ctxTarget.font = `bold ${tfH}px 'Noto Sans KR'`; 
+                ctxTarget.textBaseline = 'middle';
+                ctxTarget.textAlign = 'center';
+                tfW = ctxTarget.measureText(tfText).width || tfH; 
+                ctxTarget.fillText(tfText, 0, 0);
+            }
+            ctxTarget.restore();
+        }
+
         function renderOverlayCanvas() {
             oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             if (!tfMode) return;
 
-            oCtx.fillStyle = 'rgba(241, 245, 249, 0.4)'; oCtx.fillRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-            
+            oCtx.fillStyle = 'rgba(241, 245, 249, 0.3)'; oCtx.fillRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             oCtx.strokeStyle = currentColor;
             oCtx.lineWidth = currentLineWidth;
+            
+            drawTransformedObject(oCtx);
 
-            if (tfMode === 'image' && tfImgObj) {
-                oCtx.imageSmoothingEnabled = false;
-                oCtx.drawImage(tfImgObj, tfX, tfY, tfW, tfH);
-            } else if (tfMode === 'rect') {
-                oCtx.strokeRect(tfX, tfY, tfW, tfH);
-            } else if (tfMode === 'circle') {
-                oCtx.beginPath();
-                oCtx.ellipse(tfX + tfW/2, tfY + tfH/2, tfW/2, tfH/2, 0, 0, 2 * Math.PI);
-                oCtx.stroke();
-            } else if (tfMode === 'text') {
-                oCtx.fillStyle = currentColor;
-                oCtx.font = `bold ${tfH}px 'Noto Sans KR'`; 
-                oCtx.textBaseline = 'top';
-                tfW = oCtx.measureText(tfText).width || tfH; 
-                oCtx.fillText(tfText, tfX, tfY);
+            // 가이드 점선 및 핸들 UI 그리기
+            oCtx.save();
+            if (tfMode === 'line') {
+                const hSize = 12;
+                oCtx.fillStyle = '#ffffff'; oCtx.strokeStyle = '#10b981'; oCtx.lineWidth = 2;
+                oCtx.beginPath(); oCtx.arc(lineStartX, lineStartY, hSize/2, 0, 2*Math.PI); oCtx.fill(); oCtx.stroke();
+                oCtx.beginPath(); oCtx.arc(lineEndX, lineEndY, hSize/2, 0, 2*Math.PI); oCtx.fill(); oCtx.stroke();
+                oCtx.restore();
+                return;
             }
 
-            oCtx.strokeStyle = '#10b981'; oCtx.lineWidth = 1.5; oCtx.setLineDash([4, 4]);
-            oCtx.strokeRect(tfX, tfY, tfW, tfH); oCtx.setLineDash([]);
+            const cx = tfX + tfW/2; const cy = tfY + tfH/2;
+            oCtx.translate(cx, cy);
+            oCtx.rotate(tfAngle * Math.PI / 180);
             
+            let lx = -tfW/2; let ly = -tfH/2;
+
+            oCtx.strokeStyle = '#10b981'; oCtx.lineWidth = 1.5; oCtx.setLineDash([4, 4]);
+            oCtx.strokeRect(lx, ly, tfW, tfH); oCtx.setLineDash([]);
+            
+            // 회전 핸들
+            oCtx.beginPath(); oCtx.moveTo(0, ly); oCtx.lineTo(0, ly - 30); oCtx.stroke();
+            oCtx.fillStyle = '#10b981'; oCtx.beginPath(); oCtx.arc(0, ly - 30, 6, 0, 2 * Math.PI); oCtx.fill();
+
+            // 리사이즈 핸들
             oCtx.fillStyle = '#ffffff';
             const hSize = 8;
             const drawHandle = (x, y) => { oCtx.fillRect(x - hSize/2, y - hSize/2, hSize, hSize); oCtx.strokeRect(x - hSize/2, y - hSize/2, hSize, hSize); };
             
-            drawHandle(tfX, tfY); drawHandle(tfX + tfW/2, tfY); drawHandle(tfX + tfW, tfY);
-            drawHandle(tfX, tfY + tfH/2); drawHandle(tfX + tfW, tfY + tfH/2);
-            drawHandle(tfX, tfY + tfH); drawHandle(tfX + tfW/2, tfY + tfH); drawHandle(tfX + tfW, tfY + tfH);
+            drawHandle(lx, ly); drawHandle(0, ly); drawHandle(lx + tfW, ly);
+            drawHandle(lx, 0); drawHandle(lx + tfW, 0);
+            drawHandle(lx, ly + tfH); drawHandle(0, ly + tfH); drawHandle(lx + tfW, ly + tfH);
+            oCtx.restore();
         }
 
-        function confirmImageTransform() {
+        window.confirmImageTransform = function() {
             if (tfMode) {
                 ctx.strokeStyle = currentColor; ctx.lineWidth = currentLineWidth;
-                if (tfMode === 'image' && tfImgObj) {
-                    ctx.imageSmoothingEnabled = false; ctx.drawImage(tfImgObj, tfX, tfY, tfW, tfH);
-                } else if (tfMode === 'rect') {
-                    ctx.strokeRect(tfX, tfY, tfW, tfH);
-                } else if (tfMode === 'circle') {
-                    ctx.beginPath(); ctx.ellipse(tfX + tfW/2, tfY + tfH/2, tfW/2, tfH/2, 0, 0, 2 * Math.PI); ctx.stroke();
-                } else if (tfMode === 'text') {
-                    ctx.fillStyle = currentColor; ctx.font = `bold ${tfH}px 'Noto Sans KR'`; ctx.textBaseline = 'top'; ctx.fillText(tfText, tfX, tfY);
-                }
+                drawTransformedObject(ctx);
                 saveState(); 
                 showToast("캔버스에 도장 찍기 완료!");
             }
             closeTransformMode();
-        }
+        };
 
-        function cancelImageTransform() { closeTransformMode(); }
+        window.cancelImageTransform = function() { closeTransformMode(); };
+        
         function closeTransformMode() {
-            tfMode = null; tfImgObj = null; tfAction = null;
+            tfMode = null; tfImgObj = null; tfAction = null; tfAngle = 0;
             overlayCanvas.classList.add('hidden');
             document.getElementById('imageTransformUI').classList.add('hidden');
             oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         }
 
-        // 스튜디오에서 경매 모달 열기
-        function openAuctionModalFromCanvas() {
+        window.openAuctionModalFromCanvas = function() {
             if(!currentUser) return showToast("연결 대기 중입니다.");
             if (undoStack.length <= 1) return showToast("그림을 먼저 그려주세요!");
             pendingGalleryAuctionImage = null; // 캔버스에서 출품
@@ -1431,12 +1924,12 @@
             document.getElementById('auctionTitle').value = '';
             document.getElementById('modalImagePreview').innerHTML = `<img src="${canvas.toDataURL('image/png')}" class="w-full h-full object-cover rounded-2xl">`;
             document.getElementById('auctionModal').classList.remove('hidden');
-        }
-        function closeAuctionModal() { 
+        };
+        window.closeAuctionModal = function() { 
             document.getElementById('auctionModal').classList.add('hidden'); 
             pendingGalleryAuctionImage = null;
             window.pendingGalleryDocId = null;
-        }
+        };
     </script>
 </body>
 </html>
