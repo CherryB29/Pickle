@@ -116,6 +116,10 @@
         #canvasSurface.is-gesturing { transition: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .tab-slide-track { z-index: 5; pointer-events: none; will-change: transform; animation: tabSlideTrack .36s cubic-bezier(.22, .8, .25, 1) both; }
+        .tab-slide-track.is-tab-destination { z-index: 10; }
+        @keyframes tabSlideTrack { from { transform: translateX(var(--tab-slide-from)); } to { transform: translateX(var(--tab-slide-to)); } }
+        @media (prefers-reduced-motion: reduce) { .tab-slide-track { animation-duration: 1ms; } }
         
         #toast {
             transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -208,6 +212,29 @@
         .cucumber-piece { position: absolute; width: 22px; height: 42px; border-radius: 999px; background: repeating-linear-gradient(92deg, #155f3f 0 4px, #2b9b53 4px 8px); box-shadow: inset 3px 0 0 rgba(255,255,255,.22), 2px 3px 3px rgba(24, 73, 43, .18); }
         .cucumber-piece.golden { background: repeating-linear-gradient(92deg, #c58a08 0 4px, #ffe56a 4px 8px); box-shadow: inset 3px 0 0 rgba(255,255,255,.45), 0 0 10px rgba(255, 198, 43, .95); }
         .cucumber-basket { position: absolute; bottom: 18px; width: 82px; height: 38px; border: 5px solid #8a4b1f; border-top: 0; border-radius: 0 0 22px 22px; background: repeating-linear-gradient(0deg, #e5a84a 0 6px, #c77c2c 6px 11px); box-shadow: 0 5px 0 rgba(69, 36, 15, .2); }
+        .tomato-select-scene { height: 112px; position: relative; overflow: hidden; background: linear-gradient(135deg, #fda4a0 0%, #fb7185 48%, #e5484d 100%); }
+        .tomato-select-scene::before { content: ''; position: absolute; inset: 0; opacity: .34; background-image: radial-gradient(#fff7ed 1px, transparent 1px); background-size: 17px 17px; }
+        .tomato-preview { position: absolute; width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(circle at 30% 25%, #ff9b84 0 12%, #ef4444 35%, #b91c1c 100%); box-shadow: inset -5px -5px rgba(124, 28, 22, .25), 3px 5px 7px rgba(127, 29, 29, .2); }
+        .tomato-preview::before, .tomato-target::before { content: ''; position: absolute; left: 11px; top: -1px; width: 16px; height: 12px; background: #3f8a3e; clip-path: polygon(50% 0, 63% 33%, 100% 16%, 72% 53%, 86% 90%, 50% 66%, 14% 90%, 28% 53%, 0 16%, 37% 33%); }
+        .tomato-preview-one { left: 15%; top: 45px; transform: rotate(-12deg); } .tomato-preview-two { right: 18%; top: 24px; transform: rotate(16deg) scale(.8); }
+        .tomato-preview-three { left: 43%; top: 18px; transform: rotate(-4deg) scale(.64); } .tomato-preview-four { left: 4%; top: 12px; transform: rotate(22deg) scale(.48); } .tomato-preview-five { right: 5%; bottom: -8px; transform: rotate(-24deg) scale(.56); }
+        .tomato-game-stage { position: relative; height: 310px; overflow: hidden; touch-action: manipulation; background: linear-gradient(180deg, #a6e1f3 0%, #e5f7d2 72%, #8abd68 72%, #689952 100%); }
+        .tomato-game-stage::before { content: ''; position: absolute; inset: 0 0 28% 0; opacity: .46; background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 20px 20px; }
+        .tomato-target { position: absolute; z-index: 3; width: 42px; height: 42px; border-radius: 50%; cursor: crosshair; background: radial-gradient(circle at 30% 25%, #ff9b84 0 12%, #ef4444 35%, #b91c1c 100%); box-shadow: inset -5px -5px rgba(124, 28, 22, .25), 3px 5px 7px rgba(127, 29, 29, .22); }
+        .tomato-target.golden { background: radial-gradient(circle at 30% 25%, #fff4a8 0 12%, #facc15 36%, #c58008 100%); box-shadow: inset -5px -5px rgba(133, 77, 14, .26), 0 0 14px rgba(250, 204, 21, .92); }
+        .tomato-target.burst { animation: tomatoBurst .16s ease-out forwards; pointer-events: none; }
+        .tomato-splat { position: absolute; z-index: 4; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff0a3 0 10%, #ff725f 12% 25%, #cc2924 27% 41%, rgba(204, 41, 36, .35) 43% 58%, transparent 61%); filter: drop-shadow(0 2px 2px rgba(126, 28, 24, .26)); animation: tomatoSplat .34s ease-out forwards; }
+        .tomato-splat.golden { background: radial-gradient(circle, #fffbd1 0 10%, #ffe36a 12% 25%, #f2b40d 27% 41%, rgba(221, 153, 8, .36) 43% 58%, transparent 61%); filter: drop-shadow(0 2px 3px rgba(183, 118, 5, .42)); }
+        .tomato-splash-piece { position: absolute; z-index: 5; width: var(--size); height: var(--size); border-radius: 48% 52% 45% 55%; pointer-events: none; background: var(--piece-color); box-shadow: inset -1px -1px rgba(118, 27, 21, .24); animation: tomatoSplash .48s cubic-bezier(.13, .7, .25, 1) forwards; }
+        .tomato-splash-piece.stem { width: 7px; height: 12px; border-radius: 70% 0 70% 0; background: #478c3f; box-shadow: none; }
+        .tomato-crosshair { position: absolute; z-index: 8; width: 38px; height: 38px; margin: -19px 0 0 -19px; border: 2px solid rgba(255,255,255,.96); border-radius: 50%; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(92, 16, 22, .65)); animation: tomatoCrosshair .34s ease-out forwards; }
+        .tomato-crosshair::before, .tomato-crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 2px rgba(92, 16, 22, .8); }
+        .tomato-crosshair::before { left: 50%; top: -7px; width: 2px; height: 50px; transform: translateX(-50%); }
+        .tomato-crosshair::after { top: 50%; left: -7px; width: 50px; height: 2px; transform: translateY(-50%); }
+        @keyframes tomatoBurst { 0% { opacity: 1; transform: scale(1); } 35% { opacity: 1; transform: scale(1.34); filter: brightness(1.65); } to { opacity: 0; transform: scale(1.7); filter: brightness(1.9); } }
+        @keyframes tomatoSplat { 0% { opacity: 0; transform: scale(.2); } 28% { opacity: 1; transform: scale(.9); } to { opacity: 0; transform: scale(1.65); } }
+        @keyframes tomatoSplash { 0% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(.8); } 75% { opacity: 1; } to { opacity: 0; transform: translate(var(--travel-x), var(--travel-y)) rotate(var(--rotate)) scale(.45); } }
+        @keyframes tomatoCrosshair { 0% { opacity: 1; transform: scale(.5); } 45% { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.3); } }
         .paint-select-scene { height: 112px; position: relative; overflow: hidden; background: linear-gradient(135deg, #eef4f8, #dce8ef); }
         .paint-select-belt { position: absolute; left: -10%; right: -10%; bottom: 16px; height: 28px; background: repeating-linear-gradient(90deg, #758392 0 18px, #566574 18px 28px); transform: rotate(-4deg); }
         .paint-preview-can { position: absolute; top: 21px; width: 38px; height: 44px; border-radius: 6px 6px 10px 10px; box-shadow: inset 5px 0 rgba(255,255,255,.22), 0 5px 7px rgba(30, 41, 59, .2); }
@@ -316,7 +343,7 @@
         <!-- 헤더 -->
         <header id="appHeader" class="hidden sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 justify-between items-center flex-shrink-0">
             <div class="flex items-center gap-2 cursor-pointer" onclick="switchTab('home')">
-                <div class="w-8 h-8 bg-white rounded-2xl border border-slate-100 flex items-center justify-center text-lg font-black shadow-md">🥒</div>
+                <div class="w-8 h-8 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-md"><img src="logo.png" alt="Pickle" class="h-full w-full object-cover"></div>
                 <span class="text-xl font-black tracking-tight text-slate-800">Pickle</span>
             </div>
             
@@ -442,11 +469,13 @@
                         <div class="flex-1 flex flex-col justify-center gap-2.5">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-circle text-[8px] text-slate-400 w-4 text-center"></i>
-                                <input type="range" id="lineWidth" min="1" max="50" value="4" onchange="changeLineWidth(this.value)" class="flex-1 accent-emerald-500 h-1.5">
+                                <input type="range" id="lineWidth" min="1" max="50" value="4" oninput="changeLineWidth(this.value)" class="min-w-0 flex-1 accent-emerald-500 h-1.5">
+                                <div class="flex items-center gap-1 text-[11px] font-bold text-slate-500"><input type="number" id="lineWidthValue" min="1" max="50" value="4" oninput="changeLineWidthInput(this.value)" class="w-11 rounded-md border border-slate-200 bg-slate-50 px-1 py-1 text-right text-[11px] font-bold text-slate-700 focus:border-emerald-500 focus:outline-none"><span>px</span></div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-droplet-slash text-[10px] text-slate-400 w-4 text-center"></i>
-                                <input type="range" id="lineOpacity" min="0" max="1" step="0.05" value="1" onchange="changeOpacity(this.value)" class="flex-1 accent-emerald-500 h-1.5">
+                                <input type="range" id="lineOpacity" min="0" max="1" step="0.05" value="1" oninput="changeOpacity(this.value)" class="min-w-0 flex-1 accent-emerald-500 h-1.5">
+                                <div class="flex items-center gap-1 text-[11px] font-bold text-slate-500"><input type="number" id="lineOpacityValue" min="0" max="100" value="100" oninput="changeOpacityPercent(this.value)" class="w-11 rounded-md border border-slate-200 bg-slate-50 px-1 py-1 text-right text-[11px] font-bold text-slate-700 focus:border-emerald-500 focus:outline-none"><span>%</span></div>
                             </div>
                         </div>
                     </div>
@@ -539,6 +568,10 @@
                         <div class="paint-select-scene"><div class="paint-preview-can paint-preview-blue"></div><div class="paint-preview-can paint-preview-red"></div><div class="paint-select-belt"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-slate-600">PLAY</div></div>
                         <div class="flex items-center justify-between p-4"><div><h3 class="font-black text-slate-800">페인트 분류</h3><p class="mt-0.5 text-[11px] text-slate-500">색상에 맞는 버튼으로 페인트를 분류하세요.</p><p class="mt-1 text-[10px] font-black text-slate-600">누적 <span id="paintCardCount">0</span>개</p></div><i class="fa-solid fa-chevron-right text-sm text-slate-300"></i></div>
                     </button>
+                    <button onclick="openTomatoGame()" class="w-full overflow-hidden rounded-2xl border border-rose-200 bg-white text-left shadow-sm active:scale-[0.99] transition-transform">
+                        <div class="tomato-select-scene"><div class="tomato-preview tomato-preview-one"></div><div class="tomato-preview tomato-preview-two"></div><div class="tomato-preview tomato-preview-three"></div><div class="tomato-preview tomato-preview-four"></div><div class="tomato-preview tomato-preview-five"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-rose-700">PLAY</div></div>
+                        <div class="flex items-center justify-between p-4"><div><h3 class="font-black text-slate-800">토마토 사격</h3><p class="mt-0.5 text-[11px] text-slate-500">날아가는 토마토를 눌러 맞히세요.</p><p class="mt-1 text-[10px] font-black text-rose-600">누적 <span id="tomatoCardCount">0</span>개</p></div><i class="fa-solid fa-chevron-right text-sm text-slate-300"></i></div>
+                    </button>
                 </div>
 
                 <div id="pencilGamePanel" class="hidden rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
@@ -594,6 +627,12 @@
                     <div id="paintGameStage" class="paint-game-stage rounded-xl border border-slate-200" aria-label="페인트 분류 게임판"><div class="absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black text-slate-700 shadow-sm">분류 <span id="paintPersonalCount">0</span>개</div><div class="paint-conveyor"></div></div>
                     <div class="paint-sort-controls"><button onclick="sortPaint('blue')" class="h-14 rounded-xl bg-blue-500 text-sm font-black text-white shadow-md active:scale-[0.97]"><i class="fa-solid fa-arrow-left mr-1"></i> 파랑</button><button onclick="sortPaint('red')" class="h-14 rounded-xl bg-red-500 text-sm font-black text-white shadow-md active:scale-[0.97]">빨강 <i class="fa-solid fa-arrow-right ml-1"></i></button></div>
                     <div class="rounded-xl border border-slate-200 bg-slate-50 p-3"><div class="mb-2 flex items-center justify-between"><h4 class="text-xs font-black text-slate-800"><i class="fa-solid fa-trophy text-amber-500"></i> 페인트 분류 랭킹</h4><span class="text-[10px] font-bold text-slate-500">누적 분류</span></div><ol id="paintRanking" class="space-y-1 text-[11px] text-slate-500"><li>랭킹을 불러오는 중입니다.</li></ol></div>
+                </div>
+
+                <div id="tomatoGamePanel" class="hidden rounded-2xl bg-white border border-rose-200 p-4 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between"><div><button onclick="closeTomatoGame()" class="mb-2 flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-600 shadow-sm active:scale-[0.97]"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button><h3 class="font-black text-slate-800">토마토 사격</h3><p class="text-[11px] text-slate-500 mt-0.5">양쪽에서 날아오는 토마토를 맞히세요.</p></div><div class="rounded-full bg-rose-100 px-3 py-1.5 text-xs font-black text-rose-700">획득 <span id="tomatoScore">0</span>P</div></div>
+                    <div id="tomatoGameStage" class="tomato-game-stage rounded-xl border border-rose-200" aria-label="토마토 사격 게임판"><div class="absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black text-rose-700 shadow-sm">명중 <span id="tomatoPersonalCount">0</span>개</div></div>
+                    <div class="rounded-xl border border-rose-100 bg-rose-50/60 p-3"><div class="mb-2 flex items-center justify-between"><h4 class="text-xs font-black text-rose-900"><i class="fa-solid fa-trophy text-amber-500"></i> 토마토 사격 랭킹</h4><span class="text-[10px] font-bold text-rose-600">누적 명중</span></div><ol id="tomatoRanking" class="space-y-1 text-[11px] text-slate-500"><li>랭킹을 불러오는 중입니다.</li></ol></div>
                 </div>
             </section>
 
@@ -868,6 +907,8 @@
         let processedSettlements = new Set();
         let settlementAlertQueue = [];
         let isSettlementAlertShowing = false;
+        let activeTabName = 'home';
+        let tabTransitionTimer = null;
 
         // 캔버스 변수
         let currentTool = 'pen';
@@ -892,6 +933,7 @@
         let pointDingTimer = null;
         let cucumberGame = { active: false, basketX: 0, items: [], lastSpawnAt: 0, lastFrameAt: 0, frame: null, caught: 0, caughtPieces: 0, feverProgress: 0, feverUntil: 0, pendingPoints: 0, pendingPieces: 0, flushTimer: null };
         let paintGame = { active: false, bucket: null, frame: null, lastFrameAt: 0, lastSpawnAt: 0, score: 0, pendingPoints: 0, pendingCount: 0, flushTimer: null };
+        let tomatoGame = { active: false, items: [], frame: null, lastFrameAt: 0, lastSpawnAt: 0, score: 0, pendingPoints: 0, pendingCount: 0, flushTimer: null };
         
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -915,7 +957,8 @@
         let tfAction = null;
         let lastTfPos = {x: 0, y: 0};
 
-        let favColors = ['#000000', '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
+        const DEFAULT_FAVORITE_COLORS = ['#000000', '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
+        let favColors = [...DEFAULT_FAVORITE_COLORS];
 
         // UI 헬퍼
         function showToast(msg) {
@@ -1107,6 +1150,10 @@
                     onSnapshot(userRef, (snap) => {
                         if (snap.exists()) {
                             userData = snap.data();
+                            favColors = Array.isArray(userData.favoriteColors) && userData.favoriteColors.length
+                                ? userData.favoriteColors.filter((color) => /^#[0-9a-f]{6}$/i.test(color)).slice(-14)
+                                : [...DEFAULT_FAVORITE_COLORS];
+                            renderFavColors();
                             updatePointsUI();
                             renderPencilGame();
                             renderMiniGameStats();
@@ -1120,7 +1167,7 @@
                             }
                         } else {
                             const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
-                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0, cucumberCaughtCount: 0, paintSortedCount: 0 };
+                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0, cucumberCaughtCount: 0, paintSortedCount: 0, tomatoShotCount: 0, favoriteColors: [...DEFAULT_FAVORITE_COLORS] };
                             setDoc(userRef, newProfile);
                             pendingSignupNickname = '';
                         }
@@ -1604,7 +1651,7 @@
             if (userData.lastCheckInDate === today) return showToast('오늘 출석 보상을 이미 수령하셨습니다.');
 
             const roll = Math.random() * 100;
-            const reward = roll < 1 ? 10000 : roll < 6 ? 2000 : roll < 26 ? 1000 : 500;
+            const reward = roll < 1 ? 6000 : roll < 6 ? 2000 : roll < 26 ? 600 : 300;
 
             try {
                 const { db, appId, doc, runTransaction } = window.FB;
@@ -1945,7 +1992,7 @@
         function showAttendanceReward(reward) {
             const overlay = document.getElementById('attendanceRewardOverlay');
             if (!overlay) return;
-            const tier = reward === 10000
+            const tier = reward === 6000
                 ? { label: 'JACKPOT', icon: 'fa-crown', accent: 'from-violet-600 to-fuchsia-500', spark: '#e9d5ff' }
                 : reward === 2000
                     ? { label: 'GOLD BONUS', icon: 'fa-trophy', accent: 'from-amber-400 to-orange-500', spark: '#fde68a' }
@@ -1956,7 +2003,7 @@
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
             const card = document.createElement('div');
-            card.className = `attendance-reward-card${reward === 10000 ? ' jackpot' : ''} relative w-full max-w-[290px] overflow-hidden rounded-2xl bg-gradient-to-br ${tier.accent} p-6 text-center text-white shadow-2xl`;
+            card.className = `attendance-reward-card${reward === 6000 ? ' jackpot' : ''} relative w-full max-w-[290px] overflow-hidden rounded-2xl bg-gradient-to-br ${tier.accent} p-6 text-center text-white shadow-2xl`;
             card.innerHTML = `<div class="relative z-10"><div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl shadow-inner"><i class="fa-solid ${tier.icon}"></i></div><p class="text-[11px] font-black tracking-wide text-white/80">${tier.label}</p><p class="mt-1 text-4xl font-black">+${reward.toLocaleString()}P</p><p class="mt-3 text-xs font-bold text-white/90">오늘의 출석 보상입니다</p></div>`;
             overlay.appendChild(card);
             for (let index = 0; index < 18; index += 1) {
@@ -1971,7 +2018,7 @@
                 spark.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
                 overlay.appendChild(spark);
             }
-            if (reward === 10000) {
+            if (reward === 6000) {
                 setTimeout(() => card.classList.add('leaving'), 1650);
             }
             setTimeout(() => {
@@ -2013,8 +2060,48 @@
 
         window.switchTab = function(tabName) {
             const views = ['home', 'draw', 'auction', 'gallery', 'points', 'settings'];
-            views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
-            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            const nextView = document.getElementById(`view-${tabName}`);
+            const currentView = document.getElementById(`view-${activeTabName}`);
+            const isChangingTab = tabName !== activeTabName && currentView && !currentView.classList.contains('hidden');
+            const currentIndex = views.indexOf(activeTabName);
+            const nextIndex = views.indexOf(tabName);
+            clearTimeout(tabTransitionTimer);
+
+            views.forEach((viewName) => {
+                const view = document.getElementById(`view-${viewName}`);
+                view.classList.remove('tab-slide-track', 'is-tab-destination');
+                view.style.removeProperty('--tab-slide-from');
+                view.style.removeProperty('--tab-slide-to');
+                if (viewName !== activeTabName && viewName !== tabName) view.classList.add('hidden');
+            });
+
+            if (isChangingTab) {
+                const firstIndex = Math.min(currentIndex, nextIndex);
+                const lastIndex = Math.max(currentIndex, nextIndex);
+                for (let index = firstIndex; index <= lastIndex; index += 1) {
+                    const view = document.getElementById(`view-${views[index]}`);
+                    view.classList.remove('hidden');
+                    view.style.setProperty('--tab-slide-from', `${(index - currentIndex) * 100}%`);
+                    view.style.setProperty('--tab-slide-to', `${(index - nextIndex) * 100}%`);
+                    view.classList.add('tab-slide-track');
+                }
+                nextView.classList.add('is-tab-destination');
+                tabTransitionTimer = setTimeout(() => {
+                    views.forEach((viewName) => {
+                        const view = document.getElementById(`view-${viewName}`);
+                        view.classList.remove('tab-slide-track', 'is-tab-destination');
+                        view.style.removeProperty('--tab-slide-from');
+                        view.style.removeProperty('--tab-slide-to');
+                        view.classList.toggle('hidden', viewName !== tabName);
+                    });
+                }, 360);
+            } else {
+                views.forEach((viewName) => {
+                    if (viewName !== tabName) document.getElementById(`view-${viewName}`).classList.add('hidden');
+                });
+                nextView.classList.remove('hidden');
+            }
+            activeTabName = tabName;
 
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('text-emerald-500'); btn.classList.add('text-slate-400');
@@ -2051,9 +2138,11 @@
         function resetPointGamePanels() {
             stopCucumberGame();
             stopPaintGame();
+            stopTomatoGame();
             document.getElementById('pencilGamePanel').classList.add('hidden');
             document.getElementById('cucumberGamePanel').classList.add('hidden');
             document.getElementById('paintGamePanel').classList.add('hidden');
+            document.getElementById('tomatoGamePanel').classList.add('hidden');
             document.getElementById('pointGameSelector').classList.remove('hidden');
         }
 
@@ -2097,6 +2186,22 @@
         window.closePaintGame = function() {
             stopPaintGame();
             document.getElementById('paintGamePanel').classList.add('hidden');
+            document.getElementById('pointGameSelector').classList.remove('hidden');
+        };
+
+        window.openTomatoGame = function() {
+            document.getElementById('pointGameSelector').classList.add('hidden');
+            document.getElementById('pencilGamePanel').classList.add('hidden');
+            document.getElementById('cucumberGamePanel').classList.add('hidden');
+            document.getElementById('paintGamePanel').classList.add('hidden');
+            document.getElementById('tomatoGamePanel').classList.remove('hidden');
+            startTomatoGame();
+            loadMiniGameRanking('tomato');
+        };
+
+        window.closeTomatoGame = function() {
+            stopTomatoGame();
+            document.getElementById('tomatoGamePanel').classList.add('hidden');
             document.getElementById('pointGameSelector').classList.remove('hidden');
         };
 
@@ -2391,24 +2496,181 @@
             if (paintGame.pendingPoints > 0) flushPaintRewards();
         }
 
+        function spawnTomatoTarget(stage) {
+            const fromLeft = Math.random() < 0.5;
+            const isGolden = Math.random() < 0.1;
+            const element = document.createElement('button');
+            const x = fromLeft ? -48 : stage.clientWidth + 6;
+            const y = 36 + Math.random() * Math.max(1, stage.clientHeight * 0.48);
+            const item = {
+                element, x, y, velocityX: (fromLeft ? 1 : -1) * (0.32 + Math.random() * 0.16), velocityY: -0.12 + Math.random() * 0.24,
+                gravity: 0.00042 + Math.random() * 0.0002, angle: 0, spin: (fromLeft ? 1 : -1) * (0.08 + Math.random() * 0.1), isGolden, points: isGolden ? 15 : 3, hit: false
+            };
+            element.type = 'button';
+            element.className = `tomato-target${isGolden ? ' golden' : ''}`;
+            element.setAttribute('aria-label', isGolden ? '황금 토마토 맞히기' : '토마토 맞히기');
+            element.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                hitTomatoTarget(item, event);
+            });
+            stage.appendChild(element);
+            tomatoGame.items.push(item);
+        }
+
+        function hitTomatoTarget(item, event) {
+            if (!tomatoGame.active || item.hit) return;
+            item.hit = true;
+            item.element.classList.add('burst');
+            createTomatoSplash(item);
+            createTomatoCrosshair(event);
+            tomatoGame.score += item.points;
+            tomatoGame.pendingPoints += item.points;
+            tomatoGame.pendingCount += 1;
+            document.getElementById('tomatoScore').innerText = tomatoGame.score;
+            const previousPoints = userData.points || 0;
+            userData.points = previousPoints + item.points;
+            userData.tomatoShotCount = (userData.tomatoShotCount || 0) + 1;
+            renderMiniGameStats();
+            animatePointGain(previousPoints, userData.points);
+            if (item.isGolden) launchGoldConfetti(document.getElementById('tomatoGameStage'), item.x + 21, item.y + 21);
+            clearTimeout(tomatoGame.flushTimer);
+            tomatoGame.flushTimer = setTimeout(flushTomatoRewards, 550);
+            setTimeout(() => item.element.remove(), 230);
+        }
+
+        function createTomatoCrosshair(event) {
+            const stage = document.getElementById('tomatoGameStage');
+            if (!stage || !event) return;
+            const bounds = stage.getBoundingClientRect();
+            const crosshair = document.createElement('span');
+            crosshair.className = 'tomato-crosshair';
+            crosshair.style.left = `${event.clientX - bounds.left}px`;
+            crosshair.style.top = `${event.clientY - bounds.top}px`;
+            stage.appendChild(crosshair);
+            setTimeout(() => crosshair.remove(), 380);
+        }
+
+        function createTomatoSplash(item) {
+            const stage = document.getElementById('tomatoGameStage');
+            if (!stage) return;
+            const originX = item.x + 21;
+            const originY = item.y + 21;
+            const splat = document.createElement('div');
+            splat.className = `tomato-splat${item.isGolden ? ' golden' : ''}`;
+            splat.style.left = `${originX}px`;
+            splat.style.top = `${originY}px`;
+            stage.appendChild(splat);
+
+            for (let index = 0; index < 10; index += 1) {
+                const angle = (Math.PI * 2 * index) / 10 + (Math.random() - .5) * .42;
+                const distance = 18 + Math.random() * 30;
+                const piece = document.createElement('span');
+                const isStemPiece = index === 0;
+                piece.className = `tomato-splash-piece${isStemPiece ? ' stem' : ''}`;
+                piece.style.left = `${originX}px`;
+                piece.style.top = `${originY}px`;
+                piece.style.setProperty('--size', `${5 + Math.random() * 7}px`);
+                piece.style.setProperty('--piece-color', item.isGolden ? '#f5bd18' : index % 3 === 0 ? '#ff8b72' : '#d52e28');
+                piece.style.setProperty('--travel-x', `${Math.cos(angle) * distance}px`);
+                piece.style.setProperty('--travel-y', `${Math.sin(angle) * distance + 10}px`);
+                piece.style.setProperty('--rotate', `${Math.round((Math.random() - .5) * 420)}deg`);
+                stage.appendChild(piece);
+                setTimeout(() => piece.remove(), 520);
+            }
+            setTimeout(() => splat.remove(), 460);
+        }
+
+        async function flushTomatoRewards() {
+            const pointsToSave = tomatoGame.pendingPoints;
+            const countToSave = tomatoGame.pendingCount;
+            tomatoGame.pendingPoints = 0;
+            tomatoGame.pendingCount = 0;
+            if (!currentUser?.uid || pointsToSave <= 0) return;
+            const { db, appId, doc, runTransaction } = window.FB;
+            try {
+                const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await runTransaction(db, async (transaction) => {
+                    const profileSnap = await transaction.get(profileRef);
+                    if (!profileSnap.exists()) throw new Error('Profile is missing.');
+                    transaction.update(profileRef, { points: (profileSnap.data().points || 0) + pointsToSave, tomatoShotCount: (profileSnap.data().tomatoShotCount || 0) + countToSave });
+                });
+            } catch (error) {
+                tomatoGame.pendingPoints += pointsToSave;
+                tomatoGame.pendingCount += countToSave;
+                console.error('Tomato reward error', error);
+            }
+        }
+
+        function runTomatoGame(timestamp) {
+            if (!tomatoGame.active) return;
+            const stage = document.getElementById('tomatoGameStage');
+            if (!stage) return stopTomatoGame();
+            const delta = Math.min(40, timestamp - (tomatoGame.lastFrameAt || timestamp));
+            tomatoGame.lastFrameAt = timestamp;
+            if (timestamp - tomatoGame.lastSpawnAt > 430) {
+                spawnTomatoTarget(stage);
+                tomatoGame.lastSpawnAt = timestamp;
+            }
+            tomatoGame.items = tomatoGame.items.filter((item) => {
+                if (item.hit) return false;
+                item.x += item.velocityX * delta;
+                item.y += item.velocityY * delta;
+                item.velocityY += item.gravity * delta;
+                item.angle += item.spin * delta;
+                item.element.style.left = `${item.x}px`;
+                item.element.style.top = `${item.y}px`;
+                item.element.style.transform = `rotate(${item.angle}deg)`;
+                const hasLeftStage = item.x < -62 || item.x > stage.clientWidth + 62 || item.y > stage.clientHeight + 55;
+                if (hasLeftStage) item.element.remove();
+                return !hasLeftStage;
+            });
+            tomatoGame.frame = requestAnimationFrame(runTomatoGame);
+        }
+
+        function startTomatoGame() {
+            const stage = document.getElementById('tomatoGameStage');
+            if (!stage) return;
+            stopTomatoGame();
+            tomatoGame.active = true;
+            tomatoGame.score = 0;
+            tomatoGame.lastFrameAt = 0;
+            tomatoGame.lastSpawnAt = performance.now() - 430;
+            document.getElementById('tomatoScore').innerText = '0';
+            tomatoGame.frame = requestAnimationFrame(runTomatoGame);
+        }
+
+        function stopTomatoGame() {
+            if (tomatoGame.frame) cancelAnimationFrame(tomatoGame.frame);
+            tomatoGame.frame = null;
+            tomatoGame.active = false;
+            tomatoGame.items.forEach((item) => item.element.remove());
+            tomatoGame.items = [];
+            if (tomatoGame.pendingPoints > 0) flushTomatoRewards();
+        }
+
         function renderMiniGameStats() {
             const pencilCardCount = document.getElementById('pencilCardCount');
             const cucumberCardCount = document.getElementById('cucumberCardCount');
             const cucumberPersonalCount = document.getElementById('cucumberPersonalCount');
             const paintCardCount = document.getElementById('paintCardCount');
             const paintPersonalCount = document.getElementById('paintPersonalCount');
+            const tomatoCardCount = document.getElementById('tomatoCardCount');
+            const tomatoPersonalCount = document.getElementById('tomatoPersonalCount');
             if (pencilCardCount) pencilCardCount.innerText = (userData.pencilSharpenedCount || 0).toLocaleString();
             if (cucumberCardCount) cucumberCardCount.innerText = (userData.cucumberCaughtCount || 0).toLocaleString();
             if (cucumberPersonalCount) cucumberPersonalCount.innerText = (userData.cucumberCaughtCount || 0).toLocaleString();
             if (paintCardCount) paintCardCount.innerText = (userData.paintSortedCount || 0).toLocaleString();
             if (paintPersonalCount) paintPersonalCount.innerText = (userData.paintSortedCount || 0).toLocaleString();
+            if (tomatoCardCount) tomatoCardCount.innerText = (userData.tomatoShotCount || 0).toLocaleString();
+            if (tomatoPersonalCount) tomatoPersonalCount.innerText = (userData.tomatoShotCount || 0).toLocaleString();
         }
 
         async function loadMiniGameRanking(game) {
-            const list = document.getElementById(game === 'pencil' ? 'pencilRanking' : game === 'cucumber' ? 'cucumberRanking' : 'paintRanking');
+            const list = document.getElementById(game === 'pencil' ? 'pencilRanking' : game === 'cucumber' ? 'cucumberRanking' : game === 'paint' ? 'paintRanking' : 'tomatoRanking');
             if (!list || !window.FB) return;
             list.innerHTML = '<li>랭킹을 불러오는 중입니다.</li>';
-            const scoreKey = game === 'pencil' ? 'pencilSharpenedCount' : game === 'cucumber' ? 'cucumberCaughtCount' : 'paintSortedCount';
+            const scoreKey = game === 'pencil' ? 'pencilSharpenedCount' : game === 'cucumber' ? 'cucumberCaughtCount' : game === 'paint' ? 'paintSortedCount' : 'tomatoShotCount';
             const unit = game === 'pencil' ? '자루' : game === 'cucumber' ? '조각' : '개';
             try {
                 const { db, collectionGroup, getDocs } = window.FB;
@@ -2481,7 +2743,7 @@
 
             const bodyGeometry = new THREE.CylinderGeometry(0.36, 0.36, 6, 8).toNonIndexed();
             const bodyPositions = bodyGeometry.getAttribute('position');
-            const facetPalette = [0xf8cf56, 0xf0bd42, 0xe1a634, 0xd5962c, 0xe4aa36, 0xffd967, 0xe5ab35, 0xdca033];
+            const facetPalette = getRandomPencilPalette();
             const facetColors = new Float32Array(bodyPositions.count * 3);
             for (let vertexIndex = 0; vertexIndex < bodyPositions.count; vertexIndex += 1) {
                 const angle = Math.atan2(bodyPositions.getZ(vertexIndex), bodyPositions.getX(vertexIndex));
@@ -2514,7 +2776,7 @@
             lead.material.depthTest = false;
             pencil.add(lead);
 
-            pencilThree = { scene, camera, renderer, pencil, wood, lead, shavings: [], rollTarget: 0, rollAngle: 0, failUntil: 0, flyStart: 0, entryStart: performance.now(), bonusSprayUntil: 0, nextBonusSpray: 0, frame: null };
+            pencilThree = { scene, camera, renderer, pencil, body, wood, lead, shavings: [], rollTarget: 0, rollAngle: 0, failUntil: 0, flyStart: 0, entryStart: performance.now(), bonusSprayUntil: 0, nextBonusSpray: 0, frame: null };
             resizePencilThreeScene();
             animatePencilThreeScene();
         }
@@ -2661,6 +2923,31 @@
             pencilThree.entryStart = performance.now();
             pencilThree.bonusSprayUntil = 0;
             pencilThree.pencil.scale.set(1, 1, 1);
+            recolorPencilBody(pencilThree.body);
+        }
+
+        function getRandomPencilPalette() {
+            const palettes = [
+                [0xf8cf56, 0xf0bd42, 0xe1a634, 0xd5962c, 0xe4aa36, 0xffd967, 0xe5ab35, 0xdca033],
+                [0x7dd3fc, 0x38bdf8, 0x0ea5e9, 0x0284c7, 0x22d3ee, 0x67e8f9, 0x0891b2, 0x0369a1],
+                [0xfda4af, 0xfb7185, 0xf43f5e, 0xe11d48, 0xf9a8d4, 0xf472b6, 0xdb2777, 0xbe123c],
+                [0x86efac, 0x4ade80, 0x22c55e, 0x16a34a, 0xa3e635, 0x84cc16, 0x65a30d, 0x3f6212],
+                [0xc4b5fd, 0xa78bfa, 0x8b5cf6, 0x7c3aed, 0xe9d5ff, 0xd8b4fe, 0x9333ea, 0x6b21a8]
+            ];
+            return palettes[Math.floor(Math.random() * palettes.length)];
+        }
+
+        function recolorPencilBody(body) {
+            if (!body?.geometry?.getAttribute('color')) return;
+            const colors = body.geometry.getAttribute('color');
+            const palette = getRandomPencilPalette();
+            for (let index = 0; index < colors.count; index += 1) {
+                const angle = Math.atan2(body.geometry.getAttribute('position').getZ(index), body.geometry.getAttribute('position').getX(index));
+                const facet = Math.min(7, Math.floor(((angle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)));
+                const color = new THREE.Color(palette[facet]);
+                colors.setXYZ(index, color.r, color.g, color.b);
+            }
+            colors.needsUpdate = true;
         }
 
         function animatePencilThreeScene() {
@@ -2908,13 +3195,23 @@
         };
         window.closeColorPicker = function() { document.getElementById('colorPickerModal').classList.add('hidden'); };
 
-        window.addFavColor = function() {
+        window.addFavColor = async function() {
             let hex = document.getElementById('cpHex').innerText;
             if(!favColors.includes(hex)) {
                 favColors.push(hex);
                 if(favColors.length > 14) favColors.shift();
                 renderFavColors();
-                showToast("즐겨찾기에 추가되었습니다.");
+                if (currentUser?.uid) {
+                    try {
+                        const { db, appId, doc, updateDoc } = window.FB;
+                        await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { favoriteColors: favColors });
+                    } catch (error) {
+                        console.error('Favorite color save error', error);
+                        showToast('즐겨찾기 저장에 실패했습니다.');
+                        return;
+                    }
+                }
+                showToast("즐겨찾기에 저장되었습니다.");
             }
         };
 
@@ -3211,12 +3508,27 @@
             document.getElementById(`tool-${tool}`).classList.replace('text-slate-600', 'text-white');
         };
         
-        window.changeLineWidth = function(v) { currentLineWidth = parseFloat(v); renderOverlayCanvas(); };
+        window.changeLineWidth = function(v) {
+            currentLineWidth = Math.max(1, Math.min(50, parseFloat(v) || 1));
+            document.getElementById('lineWidth').value = currentLineWidth;
+            document.getElementById('lineWidthValue').value = currentLineWidth;
+            renderOverlayCanvas();
+        };
+        window.changeLineWidthInput = function(v) {
+            if (v === '') return;
+            changeLineWidth(v);
+        };
         window.changeOpacity = function(v) { 
-            currentOpacity = parseFloat(v); 
+            currentOpacity = Math.max(0, Math.min(1, parseFloat(v) || 0));
+            document.getElementById('lineOpacity').value = currentOpacity;
+            document.getElementById('lineOpacityValue').value = Math.round(currentOpacity * 100);
             currentColor = hexToRgbaStr(baseColor, currentOpacity);
             document.getElementById('toolbarColorPreview').style.opacity = currentOpacity;
             renderOverlayCanvas();
+        };
+        window.changeOpacityPercent = function(v) {
+            if (v === '') return;
+            changeOpacity(parseFloat(v) / 100);
         };
         
         window.activateTransformMode = function(mode) {
@@ -3321,6 +3633,7 @@
         }
 
         function setupImageTransformEvents() {
+            let isTransformPinching = false;
             function getOvlPos(e) {
                 const rect = overlayCanvas.getBoundingClientRect();
                 let cx = e.touches ? e.touches[0].clientX : e.clientX;
@@ -3328,8 +3641,22 @@
                 return { x: (cx - rect.left) * (overlayCanvas.width / rect.width), y: (cy - rect.top) * (overlayCanvas.height / rect.height) };
             }
 
+            function updateTransformPinch(touches) {
+                canvasTouchPoints.clear();
+                [...touches].forEach((touch) => canvasTouchPoints.set(touch.identifier, { x: touch.clientX, y: touch.clientY }));
+            }
+
             function startTfDrag(e) {
                 if (!tfMode) return;
+                if (e.touches?.length >= 2) {
+                    isTransformPinching = true;
+                    isTfDragging = false;
+                    tfAction = null;
+                    updateTransformPinch(e.touches);
+                    beginCanvasPinch();
+                    e.preventDefault();
+                    return;
+                }
                 const pos = getOvlPos(e);
                 
                 let checkX = pos.x; let checkY = pos.y;
@@ -3349,6 +3676,12 @@
             }
 
             function doTfDrag(e) {
+                if (isTransformPinching) {
+                    updateTransformPinch(e.touches);
+                    if (e.touches.length >= 2) updateCanvasPinch();
+                    e.preventDefault();
+                    return;
+                }
                 if (!isTfDragging || !tfMode) return; e.preventDefault();
                 const pos = getOvlPos(e); 
 
@@ -3392,7 +3725,18 @@
                 lastTfPos.realX = pos.x; lastTfPos.realY = pos.y;
                 renderOverlayCanvas();
             }
-            function endTfDrag() { isTfDragging = false; tfAction = null; }
+            function endTfDrag(e) {
+                if (isTransformPinching) {
+                    updateTransformPinch(e.touches || []);
+                    if (canvasTouchPoints.size < 2) {
+                        endCanvasPinch();
+                        isTransformPinching = false;
+                        canvasTouchPoints.clear();
+                    }
+                }
+                isTfDragging = false;
+                tfAction = null;
+            }
 
             overlayCanvas.addEventListener('mousedown', startTfDrag); overlayCanvas.addEventListener('mousemove', doTfDrag); window.addEventListener('mouseup', endTfDrag);
             overlayCanvas.addEventListener('touchstart', startTfDrag, {passive: false}); overlayCanvas.addEventListener('touchmove', doTfDrag, {passive: false}); window.addEventListener('touchend', endTfDrag);
