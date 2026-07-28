@@ -112,6 +112,7 @@
         }
         .canvas-container { touch-action: none; }
         #canvasSurface { transform-origin: center; transition: transform .12s ease-out; }
+        #canvasSurface::after { content: ''; position: absolute; inset: 0; z-index: 20; pointer-events: none; border: 2px solid rgba(71, 85, 105, .72); border-radius: 13px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .82); }
         #canvasSurface.is-gesturing { transition: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -878,6 +879,7 @@
         let canvasPan = { x: 0, y: 0 };
         let pinchStart = null;
         const canvasTouchPoints = new Map();
+        let pendingTouchDraw = null;
         let pendingGalleryAuctionImage = null; 
         let pencilSharpeningStep = 0;
         let pencilSessionPoints = 0;
@@ -2888,14 +2890,18 @@
                 if (e.pointerType === 'touch') {
                     canvasTouchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
                     if (canvasTouchPoints.size === 2) {
+                        cancelPendingTouchDraw();
                         beginCanvasPinch();
                         isDrawing = false;
                         hideBrushCursor();
                         e.preventDefault();
                         return;
                     }
+                    queueTouchDrawing(e);
+                    e.preventDefault();
+                    return;
                 }
-                if (e.pointerType === 'touch' || e.pointerType === 'pen') e.preventDefault();
+                if (e.pointerType === 'pen') e.preventDefault();
                 updateBrushCursor(e);
                 startDraw(e);
                 if (isDrawing) canvas.setPointerCapture?.(e.pointerId);
@@ -2908,10 +2914,19 @@
                         e.preventDefault();
                         return;
                     }
+                    if (pendingTouchDraw?.pointerId === e.pointerId) {
+                        e.preventDefault();
+                        return;
+                    }
                 }
                 drawing(e);
             });
             const endCanvasPointer = (e) => {
+                const shouldFinishPendingTouch = e.pointerType === 'touch' && pendingTouchDraw?.pointerId === e.pointerId && !pinchStart;
+                if (shouldFinishPendingTouch) {
+                    cancelPendingTouchDraw();
+                    startDraw(e);
+                }
                 canvasTouchPoints.delete(e.pointerId);
                 if (canvasTouchPoints.size < 2) endCanvasPinch();
                 stopDraw();
@@ -2919,6 +2934,26 @@
             canvas.addEventListener('pointerup', endCanvasPointer);
             canvas.addEventListener('pointercancel', endCanvasPointer);
             canvas.addEventListener('pointerleave', hideBrushCursor);
+        }
+
+        function queueTouchDrawing(e) {
+            cancelPendingTouchDraw();
+            pendingTouchDraw = {
+                pointerId: e.pointerId,
+                event: e,
+                timer: setTimeout(() => {
+                    if (!pendingTouchDraw || canvasTouchPoints.size !== 1 || !canvasTouchPoints.has(e.pointerId) || pinchStart) return;
+                    startDraw(e);
+                    if (isDrawing) canvas.setPointerCapture?.(e.pointerId);
+                    pendingTouchDraw = null;
+                }, 90)
+            };
+        }
+
+        function cancelPendingTouchDraw() {
+            if (!pendingTouchDraw) return;
+            clearTimeout(pendingTouchDraw.timer);
+            pendingTouchDraw = null;
         }
 
         function applyCanvasView() {
