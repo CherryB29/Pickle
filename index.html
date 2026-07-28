@@ -1217,6 +1217,7 @@
                     }
                 });
                 auctionItemsList.sort((a, b) => b.createdAt - a.createdAt);
+                updatePointsUI();
                 if (incomingNewIds.length > 0) updateAuctionNavBadge();
                 if (!document.getElementById('view-auction').classList.contains('hidden')) renderAuctions();
             }, err => console.error(err));
@@ -1670,9 +1671,9 @@
             const summary = document.getElementById('lockedBidsSummary');
             if (!modal || !list || !summary) return;
             const now = Date.now();
-            const lockedBids = auctionItemsList.filter((item) => item.highestBidderUid === currentUser?.uid && item.status === 'active' && now - item.lastBidTime < SIX_HOURS_MS);
-            const lockedTotal = userData.lockedPoints || 0;
-            summary.innerText = `총 예치금 ${lockedTotal.toLocaleString()}P`;
+            const lockedBids = getActiveLockedBids(now);
+            const total = getDisplayedLockedTotal(lockedBids);
+            summary.innerText = `예치금 ${total.toLocaleString()}P`;
             if (lockedBids.length === 0) {
                 list.innerHTML = `<div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center"><i class="fa-solid fa-lock-open mb-2 text-lg text-slate-300"></i><p class="text-xs font-bold text-slate-500">현재 예치 중인 입찰이 없습니다.</p><p class="mt-1 text-[10px] text-slate-400">최고 입찰에 성공한 작품이 여기에 표시됩니다.</p></div>`;
             } else {
@@ -1699,6 +1700,18 @@
                 modal.classList.remove('flex');
             }, 340);
         };
+
+        function getActiveLockedBids(now = Date.now()) {
+            return auctionItemsList.filter((item) => item.highestBidderUid === currentUser?.uid && item.status === 'active' && now - item.lastBidTime < SIX_HOURS_MS);
+        }
+
+        function getActiveLockedBidTotal(lockedBids = getActiveLockedBids()) {
+            return lockedBids.reduce((sum, item) => sum + (item.currentBid || 0), 0);
+        }
+
+        function getDisplayedLockedTotal(lockedBids = getActiveLockedBids()) {
+            return getActiveLockedBidTotal(lockedBids) || (userData.lockedPoints || 0);
+        }
 
         function renderAuctions() {
             const container = document.getElementById('auctionList');
@@ -1863,7 +1876,8 @@
 
         function updatePointsUI() {
             document.getElementById('userPoints').innerText = (userData.points || 0).toLocaleString();
-            document.getElementById('lockedPoints').innerText = (userData.lockedPoints || 0).toLocaleString();
+            const lockedTotal = getDisplayedLockedTotal();
+            document.getElementById('lockedPoints').innerText = lockedTotal.toLocaleString();
         }
 
         function animatePointGain(startPoints, endPoints) {
