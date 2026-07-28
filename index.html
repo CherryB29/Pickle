@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts (Noto Sans KR) -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="three.min.js"></script>
+    <script src="./three.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js'"></script>
     
     <!-- Firebase SDK (v11.6.1) 연동 -->
     <script type="module">
@@ -182,11 +182,28 @@
 
         .pencil-game-stage { background: linear-gradient(135deg, #d7f3f2 0%, #f8e7bc 58%, #f2d797 100%); overflow: hidden; isolation: isolate; touch-action: manipulation; }
         #pencilThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+        .pencil-render-fallback { display: none; position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; background: linear-gradient(135deg, #d7f3f2, #f8e7bc); }
+        .pencil-render-fallback.is-visible { display: block; }
+        .pencil-render-fallback::before { content: ''; position: absolute; width: 74%; height: 26%; left: 13%; top: 39%; border-radius: 999px 12px 12px 999px; background: repeating-linear-gradient(90deg, #e5a62b 0 14px, #f9d75e 14px 28px); box-shadow: 0 10px 14px rgba(111, 76, 22, .16); transform: rotate(-11deg); }
+        .pencil-render-fallback::after { content: ''; position: absolute; width: 0; height: 0; left: 76%; top: 28%; border-top: 19px solid transparent; border-bottom: 19px solid transparent; border-left: 47px solid #c8955e; transform: rotate(-11deg); }
         #brushCursor { position: absolute; z-index: 20; pointer-events: none; border: 1.5px solid rgba(15, 23, 42, 0.8); border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,0.9); transform: translate(-50%, -50%); display: none; }
         .pencil-select-scene { height: 112px; position: relative; overflow: hidden; background: linear-gradient(115deg, #f6de70 0%, #fff3bd 48%, #d8f5df 100%); }
         #pencilSelectThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
         #userPoints { display: inline-block; }
         #userPoints.points-ding { animation: pointsDing 0.42s ease-in-out 2; }
+        .cucumber-select-scene { height: 112px; position: relative; overflow: hidden; background: linear-gradient(135deg, #c6eff8, #e8f8cc); }
+        .cucumber-select-scene::before { content: ''; position: absolute; inset: 0; opacity: 0.35; background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 18px 18px; }
+        .cucumber-preview { position: absolute; top: 18px; left: 12%; width: 42px; height: 84px; border-radius: 999px; background: repeating-linear-gradient(92deg, #12633e 0 6px, #299451 6px 12px); transform: rotate(28deg); box-shadow: inset 4px 0 0 rgba(255,255,255,.2), 4px 6px 7px rgba(25, 78, 48, .18); }
+        .cucumber-preview-two { top: 13px; left: 41%; width: 34px; height: 68px; transform: rotate(-21deg); }
+        .cucumber-preview-three { top: 37px; left: 70%; width: 38px; height: 76px; transform: rotate(17deg); }
+        .cucumber-game-stage { position: relative; height: 310px; overflow: hidden; touch-action: none; background: linear-gradient(180deg, #9ee5f2 0%, #d9f6c6 72%, #9ed07b 72%, #78ad62 100%); }
+        .cucumber-game-stage::before { content: ''; position: absolute; inset: 0 0 28% 0; opacity: 0.5; background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 20px 20px; }
+        .cucumber-piece { position: absolute; width: 22px; height: 42px; border-radius: 999px; background: repeating-linear-gradient(92deg, #155f3f 0 4px, #2b9b53 4px 8px); box-shadow: inset 3px 0 0 rgba(255,255,255,.22), 2px 3px 3px rgba(24, 73, 43, .18); }
+        .cucumber-piece.golden { background: repeating-linear-gradient(92deg, #c58a08 0 4px, #ffe56a 4px 8px); box-shadow: inset 3px 0 0 rgba(255,255,255,.45), 0 0 10px rgba(255, 198, 43, .95); }
+        .cucumber-basket { position: absolute; bottom: 18px; width: 82px; height: 38px; border: 5px solid #8a4b1f; border-top: 0; border-radius: 0 0 22px 22px; background: repeating-linear-gradient(0deg, #e5a84a 0 6px, #c77c2c 6px 11px); box-shadow: 0 5px 0 rgba(69, 36, 15, .2); }
+        .cucumber-basket::before, .cucumber-basket::after { content: ''; position: absolute; top: -15px; width: 6px; height: 21px; background: #8a4b1f; border-radius: 8px; }
+        .cucumber-basket::before { left: 10px; transform: rotate(-24deg); }
+        .cucumber-basket::after { right: 10px; transform: rotate(24deg); }
         .pencil-burst { position: absolute; inset: 0; z-index: 4; pointer-events: none; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 900; opacity: 0; }
         .pencil-burst.show { animation: rewardPop .72s ease-out forwards; }
         @keyframes rewardPop { 15% { opacity: 1; transform: scale(1.22); } 100% { opacity: 0; transform: translateY(-50px) scale(1); } }
@@ -468,10 +485,23 @@
                     <button onclick="openPencilGame()" class="w-full overflow-hidden rounded-2xl border border-amber-200 bg-white text-left shadow-sm active:scale-[0.99] transition-transform">
                         <div class="pencil-select-scene">
                             <canvas id="pencilSelectThreeCanvas"></canvas>
+                            <div id="pencilSelectFallback" class="pencil-render-fallback" aria-hidden="true"></div>
                             <div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-amber-700">PLAY</div>
                         </div>
                         <div class="flex items-center justify-between p-4">
                             <div><h3 class="font-black text-slate-800">연필 깎이</h3><p class="mt-0.5 text-[11px] text-slate-500">연필을 깎아 포인트를 모으세요.</p></div>
+                            <i class="fa-solid fa-chevron-right text-sm text-slate-300"></i>
+                        </div>
+                    </button>
+                    <button onclick="openCucumberGame()" class="w-full overflow-hidden rounded-2xl border border-emerald-200 bg-white text-left shadow-sm active:scale-[0.99] transition-transform">
+                        <div class="cucumber-select-scene">
+                            <div class="cucumber-preview"></div>
+                            <div class="cucumber-preview cucumber-preview-two"></div>
+                            <div class="cucumber-preview cucumber-preview-three"></div>
+                            <div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-emerald-700">PLAY</div>
+                        </div>
+                        <div class="flex items-center justify-between p-4">
+                            <div><h3 class="font-black text-slate-800">오이 받기</h3><p class="mt-0.5 text-[11px] text-slate-500">하늘에서 떨어지는 오이를 바구니에 담으세요.</p></div>
                             <i class="fa-solid fa-chevron-right text-sm text-slate-300"></i>
                         </div>
                     </button>
@@ -490,6 +520,7 @@
 
                     <button id="pencilGameButton" onclick="sharpenPencil()" class="pencil-game-stage relative w-full aspect-[1.2/1] rounded-xl border border-amber-200 active:scale-[0.99] transition-transform" aria-label="연필 깎기">
                         <canvas id="pencilThreeCanvas"></canvas>
+                        <div id="pencilGameFallback" class="pencil-render-fallback rounded-xl" aria-hidden="true"></div>
                         <div class="absolute left-3 top-3 z-[2] rounded-lg bg-slate-900/75 px-2.5 py-1.5 text-left text-[10px] font-bold text-white shadow-sm">터치해서 깎기</div>
                     </button>
 
@@ -497,6 +528,20 @@
                         <div class="rounded-lg bg-rose-50 py-2"><p class="text-[10px] font-bold text-rose-500">실패</p><p class="text-xs font-black text-rose-700">30%</p></div>
                         <div class="rounded-lg bg-sky-50 py-2"><p class="text-[10px] font-bold text-sky-500">× 2</p><p class="text-xs font-black text-sky-700">20%</p></div>
                         <div class="rounded-lg bg-violet-50 py-2"><p class="text-[10px] font-bold text-violet-500">× 10</p><p class="text-xs font-black text-violet-700">5%</p></div>
+                    </div>
+                </div>
+
+                <div id="cucumberGamePanel" class="hidden rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <button onclick="closeCucumberGame()" class="mb-1 flex items-center gap-1 text-[10px] font-bold text-slate-400"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button>
+                            <h3 class="font-black text-slate-800">오이 받기</h3>
+                            <p class="text-[11px] text-slate-500 mt-0.5">바구니를 움직여 오이 조각을 받아보세요.</p>
+                        </div>
+                        <div class="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black text-emerald-700">획득 <span id="cucumberCatchCount">0</span>P</div>
+                    </div>
+                    <div id="cucumberGameStage" class="cucumber-game-stage rounded-xl border border-emerald-200" aria-label="오이 받기 게임판">
+                        <div id="cucumberBasket" class="cucumber-basket"></div>
                     </div>
                 </div>
             </section>
@@ -773,6 +818,7 @@
         let pencilThree = null;
         let pencilSelectThree = null;
         let pointDingTimer = null;
+        let cucumberGame = { active: false, basketX: 0, items: [], lastSpawnAt: 0, lastFrameAt: 0, frame: null, caught: 0, pendingPoints: 0, flushTimer: null };
         
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -1698,6 +1744,9 @@
                 initPencilSelectScene();
                 renderPencilGame();
             }
+            if (tabName !== 'points') {
+                stopCucumberGame();
+            }
         }
 
         window.openPencilGame = function() {
@@ -1714,9 +1763,151 @@
             document.getElementById('pencilCompletedSummary').classList.add('hidden');
         };
 
+        window.openCucumberGame = function() {
+            document.getElementById('pointGameSelector').classList.add('hidden');
+            document.getElementById('pencilGamePanel').classList.add('hidden');
+            document.getElementById('pencilCompletedSummary').classList.add('hidden');
+            document.getElementById('cucumberGamePanel').classList.remove('hidden');
+            startCucumberGame();
+        };
+
+        window.closeCucumberGame = function() {
+            stopCucumberGame();
+            document.getElementById('cucumberGamePanel').classList.add('hidden');
+            document.getElementById('pointGameSelector').classList.remove('hidden');
+        };
+
+        function moveCucumberBasket(event) {
+            if (!cucumberGame.active) return;
+            const stage = document.getElementById('cucumberGameStage');
+            const basket = document.getElementById('cucumberBasket');
+            if (!stage || !basket) return;
+            const rect = stage.getBoundingClientRect();
+            cucumberGame.basketX = Math.max(41, Math.min(rect.width - 41, event.clientX - rect.left));
+            basket.style.left = `${cucumberGame.basketX}px`;
+            basket.style.transform = 'translateX(-50%)';
+        }
+
+        function spawnCucumberPiece(stage) {
+            const piece = document.createElement('div');
+            const isGolden = Math.random() < 0.05;
+            piece.className = `cucumber-piece${isGolden ? ' golden' : ''}`;
+            const x = 8 + Math.random() * Math.max(1, stage.clientWidth - 30);
+            const item = { element: piece, x, y: -45, speed: 0.25 + Math.random() * 0.2, angle: (Math.random() - 0.5) * 30, spinSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.09 + Math.random() * 0.1), points: isGolden ? 10 : 1 };
+            piece.style.left = `${x}px`;
+            piece.style.top = `${item.y}px`;
+            piece.style.transform = `rotate(${item.angle}deg)`;
+            stage.appendChild(piece);
+            cucumberGame.items.push(item);
+        }
+
+        function catchCucumber(points) {
+            cucumberGame.caught += points;
+            cucumberGame.pendingPoints += points;
+            const count = document.getElementById('cucumberCatchCount');
+            if (count) count.innerText = cucumberGame.caught;
+            const previousPoints = userData.points || 0;
+            userData.points = previousPoints + points;
+            animatePointGain(previousPoints, userData.points);
+            clearTimeout(cucumberGame.flushTimer);
+            cucumberGame.flushTimer = setTimeout(flushCucumberPoints, 550);
+        }
+
+        async function flushCucumberPoints() {
+            const pointsToSave = cucumberGame.pendingPoints;
+            cucumberGame.pendingPoints = 0;
+            if (!currentUser?.uid || pointsToSave <= 0) return;
+            const { db, appId, doc, runTransaction } = window.FB;
+            try {
+                const profileRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await runTransaction(db, async (transaction) => {
+                    const profileSnap = await transaction.get(profileRef);
+                    if (!profileSnap.exists()) throw new Error('Profile is missing.');
+                    transaction.update(profileRef, { points: (profileSnap.data().points || 0) + pointsToSave });
+                });
+            } catch (error) {
+                cucumberGame.pendingPoints += pointsToSave;
+                console.error('Cucumber reward error', error);
+            }
+        }
+
+        function runCucumberGame(timestamp) {
+            if (!cucumberGame.active) return;
+            const stage = document.getElementById('cucumberGameStage');
+            if (!stage) return stopCucumberGame();
+            const delta = Math.min(40, timestamp - (cucumberGame.lastFrameAt || timestamp));
+            cucumberGame.lastFrameAt = timestamp;
+            if (timestamp - cucumberGame.lastSpawnAt > 430) {
+                spawnCucumberPiece(stage);
+                cucumberGame.lastSpawnAt = timestamp;
+            }
+            const catchLine = stage.clientHeight - 78;
+            cucumberGame.items = cucumberGame.items.filter((item) => {
+                item.y += item.speed * delta;
+                item.angle += item.spinSpeed * delta;
+                item.element.style.top = `${item.y}px`;
+                item.element.style.transform = `rotate(${item.angle}deg)`;
+                const isAtBasket = item.y >= catchLine && item.y <= catchLine + 26;
+                const isWithinBasket = Math.abs((item.x + 11) - cucumberGame.basketX) <= 48;
+                if (isAtBasket && isWithinBasket) {
+                    item.element.remove();
+                    catchCucumber(item.points);
+                    return false;
+                }
+                if (item.y > stage.clientHeight + 45) {
+                    item.element.remove();
+                    return false;
+                }
+                return true;
+            });
+            cucumberGame.frame = requestAnimationFrame(runCucumberGame);
+        }
+
+        function startCucumberGame() {
+            const stage = document.getElementById('cucumberGameStage');
+            const basket = document.getElementById('cucumberBasket');
+            if (!stage || !basket) return;
+            stopCucumberGame();
+            cucumberGame.active = true;
+            cucumberGame.caught = 0;
+            cucumberGame.basketX = stage.clientWidth / 2;
+            cucumberGame.lastFrameAt = 0;
+            cucumberGame.lastSpawnAt = performance.now();
+            document.getElementById('cucumberCatchCount').innerText = '0';
+            basket.style.left = `${cucumberGame.basketX}px`;
+            basket.style.transform = 'translateX(-50%)';
+            if (!stage.dataset.cucumberBound) {
+                stage.addEventListener('pointermove', moveCucumberBasket);
+                stage.addEventListener('pointerdown', (event) => {
+                    event.preventDefault();
+                    moveCucumberBasket(event);
+                });
+                stage.dataset.cucumberBound = 'true';
+            }
+            cucumberGame.frame = requestAnimationFrame(runCucumberGame);
+        }
+
+        function stopCucumberGame() {
+            if (cucumberGame.frame) cancelAnimationFrame(cucumberGame.frame);
+            cucumberGame.frame = null;
+            cucumberGame.active = false;
+            cucumberGame.items.forEach((item) => item.element.remove());
+            cucumberGame.items = [];
+            if (cucumberGame.pendingPoints > 0) flushCucumberPoints();
+        }
+
+        function showPencilFallback(elementId) {
+            document.getElementById(elementId)?.classList.add('is-visible');
+        }
+
+        function hidePencilFallback(elementId) {
+            document.getElementById(elementId)?.classList.remove('is-visible');
+        }
+
         function initPencilThreeScene() {
             const canvas = document.getElementById('pencilThreeCanvas');
-            if (!canvas || !window.THREE) return;
+            if (!canvas || !window.THREE) return showPencilFallback('pencilGameFallback');
+            hidePencilFallback('pencilGameFallback');
             if (pencilThree) {
                 resizePencilThreeScene();
                 return;
@@ -1726,7 +1917,13 @@
             const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
             camera.position.set(0, 1.1, 9);
             camera.lookAt(0, 0, 0);
-            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            let renderer;
+            try {
+                renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            } catch (error) {
+                console.warn('Three.js pencil renderer is unavailable.', error);
+                return showPencilFallback('pencilGameFallback');
+            }
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1810,7 +2007,8 @@
 
         function initPencilSelectScene() {
             const canvas = document.getElementById('pencilSelectThreeCanvas');
-            if (!canvas || !window.THREE) return;
+            if (!canvas || !window.THREE) return showPencilFallback('pencilSelectFallback');
+            hidePencilFallback('pencilSelectFallback');
             if (pencilSelectThree) {
                 const width = canvas.clientWidth;
                 const height = canvas.clientHeight;
@@ -1824,7 +2022,13 @@
             const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
             camera.position.set(0.25, 0.55, 3.9);
             camera.lookAt(0.25, 0, 0);
-            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            let renderer;
+            try {
+                renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            } catch (error) {
+                console.warn('Three.js pencil preview renderer is unavailable.', error);
+                return showPencilFallback('pencilSelectFallback');
+            }
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.outputColorSpace = THREE.SRGBColorSpace;
             scene.add(new THREE.HemisphereLight(0xfff5d6, 0x538165, 2.5));
