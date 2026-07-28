@@ -1671,8 +1671,8 @@
             if (!modal || !list || !summary) return;
             const now = Date.now();
             const lockedBids = auctionItemsList.filter((item) => item.highestBidderUid === currentUser?.uid && item.status === 'active' && now - item.lastBidTime < SIX_HOURS_MS);
-            const total = lockedBids.reduce((sum, item) => sum + (item.currentBid || 0), 0);
-            summary.innerText = `예치금 ${total.toLocaleString()}P`;
+            const lockedTotal = userData.lockedPoints || 0;
+            summary.innerText = `총 예치금 ${lockedTotal.toLocaleString()}P`;
             if (lockedBids.length === 0) {
                 list.innerHTML = `<div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center"><i class="fa-solid fa-lock-open mb-2 text-lg text-slate-300"></i><p class="text-xs font-bold text-slate-500">현재 예치 중인 입찰이 없습니다.</p><p class="mt-1 text-[10px] text-slate-400">최고 입찰에 성공한 작품이 여기에 표시됩니다.</p></div>`;
             } else {
