@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts (Noto Sans KR) -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="three.min.js"></script>
     
     <!-- Firebase SDK (v11.6.1) 연동 -->
     <script type="module">
@@ -39,7 +40,8 @@
             onSnapshot, 
             updateDoc, 
             getDoc,
-            getDocs
+            getDocs,
+            runTransaction
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -61,7 +63,7 @@
             auth, db, appId, signInAnonymously, createUserWithEmailAndPassword, 
             signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, 
             signOut, onAuthStateChanged, collection, doc, setDoc, getDoc, 
-            getDocs, addDoc, deleteDoc, onSnapshot, updateDoc
+            getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, runTransaction
         };
     </script>
 
@@ -177,6 +179,18 @@
         html.dark #appNav { background-color: rgba(30, 41, 59, 0.95) !important; border-top-color: #475569 !important; }
         html.dark #appHeader { background-color: rgba(30, 41, 59, 0.9) !important; border-bottom-color: #475569 !important; }
         html.dark canvas { background-color: #ffffff; } /* 캔버스 내부는 하얗게 유지 */
+
+        .pencil-game-stage { background: linear-gradient(135deg, #d7f3f2 0%, #f8e7bc 58%, #f2d797 100%); overflow: hidden; isolation: isolate; touch-action: manipulation; }
+        #pencilThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+        #brushCursor { position: absolute; z-index: 20; pointer-events: none; border: 1.5px solid rgba(15, 23, 42, 0.8); border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,0.9); transform: translate(-50%, -50%); display: none; }
+        .pencil-select-scene { height: 112px; position: relative; overflow: hidden; background: linear-gradient(115deg, #f6de70 0%, #fff3bd 48%, #d8f5df 100%); }
+        #pencilSelectThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+        #userPoints { display: inline-block; }
+        #userPoints.points-ding { animation: pointsDing 0.42s ease-in-out 2; }
+        .pencil-burst { position: absolute; inset: 0; z-index: 4; pointer-events: none; display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 900; opacity: 0; }
+        .pencil-burst.show { animation: rewardPop .72s ease-out forwards; }
+        @keyframes rewardPop { 15% { opacity: 1; transform: scale(1.22); } 100% { opacity: 0; transform: translateY(-50px) scale(1); } }
+        @keyframes pointsDing { 0%, 100% { transform: translateY(0) scale(1); color: inherit; } 35% { transform: translateY(-3px) scale(1.22); color: #d97706; } 65% { transform: translateY(1px) scale(1.08); color: #f59e0b; } }
     </style>
 </head>
 <body class="bg-slate-100 relative transition-colors duration-300">
@@ -324,6 +338,7 @@
                     <div class="relative bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-shrink-0 aspect-square w-full h-full max-h-full mx-auto" style="max-height: 45vh;">
                         <canvas id="paintCanvas" width="432" height="432" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
                         <canvas id="overlayCanvas" width="432" height="432" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
+                        <div id="brushCursor"></div>
 
                         <!-- 변환 조절 플로팅 UI -->
                         <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-xl flex flex-col gap-1.5 z-30 hidden border border-slate-200">
@@ -436,7 +451,57 @@
                 </div>
             </section>
 
-            <!-- 5. SETTINGS -->
+            <!-- 5. POINTS -->
+            <section id="view-points" class="hidden absolute inset-0 p-5 pb-24 overflow-y-auto space-y-4 bg-slate-50">
+                <div class="flex items-end justify-between">
+                    <div>
+                        <p class="text-[11px] font-bold tracking-wide text-emerald-600">MINI GAME ARCADE</p>
+                        <h2 class="text-xl font-black text-slate-800">포인트</h2>
+                    </div>
+                    <div id="pencilCompletedSummary" class="hidden rounded-xl bg-amber-100 px-3 py-2 text-right">
+                        <p class="text-[9px] font-bold text-amber-700">깎은 연필</p>
+                        <p class="text-sm font-black text-amber-900"><span id="pencilCompletedCount">0</span>자루</p>
+                    </div>
+                </div>
+
+                <div id="pointGameSelector" class="space-y-3">
+                    <button onclick="openPencilGame()" class="w-full overflow-hidden rounded-2xl border border-amber-200 bg-white text-left shadow-sm active:scale-[0.99] transition-transform">
+                        <div class="pencil-select-scene">
+                            <canvas id="pencilSelectThreeCanvas"></canvas>
+                            <div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-amber-700">PLAY</div>
+                        </div>
+                        <div class="flex items-center justify-between p-4">
+                            <div><h3 class="font-black text-slate-800">연필 깎이</h3><p class="mt-0.5 text-[11px] text-slate-500">연필을 깎아 포인트를 모으세요.</p></div>
+                            <i class="fa-solid fa-chevron-right text-sm text-slate-300"></i>
+                        </div>
+                    </button>
+                    <div class="rounded-2xl border border-dashed border-slate-300 bg-white/60 px-4 py-5 text-center text-xs font-bold text-slate-400">새 미니게임이 곧 추가됩니다.</div>
+                </div>
+
+                <div id="pencilGamePanel" class="hidden rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <button onclick="closePencilGame()" class="mb-1 flex items-center gap-1 text-[10px] font-bold text-slate-400"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button>
+                            <h3 class="font-black text-slate-800">연필 깎이</h3>
+                            <p class="text-[11px] text-slate-500 mt-0.5">화면을 눌러 연필을 100단계까지 깎아보세요.</p>
+                        </div>
+                        <div id="pencilStepBadge" class="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black text-emerald-700">0 / 100</div>
+                    </div>
+
+                    <button id="pencilGameButton" onclick="sharpenPencil()" class="pencil-game-stage relative w-full aspect-[1.2/1] rounded-xl border border-amber-200 active:scale-[0.99] transition-transform" aria-label="연필 깎기">
+                        <canvas id="pencilThreeCanvas"></canvas>
+                        <div class="absolute left-3 top-3 z-[2] rounded-lg bg-slate-900/75 px-2.5 py-1.5 text-left text-[10px] font-bold text-white shadow-sm">터치해서 깎기</div>
+                    </button>
+
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="rounded-lg bg-rose-50 py-2"><p class="text-[10px] font-bold text-rose-500">실패</p><p class="text-xs font-black text-rose-700">30%</p></div>
+                        <div class="rounded-lg bg-sky-50 py-2"><p class="text-[10px] font-bold text-sky-500">× 2</p><p class="text-xs font-black text-sky-700">20%</p></div>
+                        <div class="rounded-lg bg-violet-50 py-2"><p class="text-[10px] font-bold text-violet-500">× 10</p><p class="text-xs font-black text-violet-700">5%</p></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. SETTINGS -->
             <section id="view-settings" class="hidden absolute inset-0 p-5 pb-24 overflow-y-auto space-y-4">
                 <h2 class="text-xl font-bold text-slate-800">계정 및 설정</h2>
                 
@@ -502,6 +567,9 @@
             </button>
             <button onclick="switchTab('gallery')" id="nav-gallery" class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
                 <i class="fa-solid fa-images text-lg"></i><span class="text-[10px] font-bold">갤러리</span>
+            </button>
+            <button onclick="switchTab('points')" id="nav-points" class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
+                <i class="fa-solid fa-coins text-lg"></i><span class="text-[10px] font-bold">포인트</span>
             </button>
             <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
                 <i class="fa-solid fa-gear text-lg"></i><span class="text-[10px] font-bold">설정</span>
@@ -699,6 +767,12 @@
         let currentLineWidth = 4;
         let isDrawing = false, startX = 0, startY = 0, snapshot = null;
         let pendingGalleryAuctionImage = null; 
+        let pencilSharpeningStep = 0;
+        let pencilSessionPoints = 0;
+        let pencilGameBusy = false;
+        let pencilThree = null;
+        let pencilSelectThree = null;
+        let pointDingTimer = null;
         
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -910,6 +984,7 @@
                         if (snap.exists()) {
                             userData = snap.data();
                             updatePointsUI();
+                            renderPencilGame();
                             document.getElementById('settingsNickname').innerText = userData.nickname || '작가';
                             checkCheckInStatus();
                             
@@ -920,7 +995,7 @@
                             }
                         } else {
                             const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
-                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0 };
+                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0 };
                             setDoc(userRef, newProfile);
                             pendingSignupNickname = '';
                         }
@@ -1028,7 +1103,7 @@
                         }
                         auctionItemsList.push({ id, ...data, isNew });
                     } else if (data.status === 'closed' || isExpired) {
-                        if (data.highestBidderUid === currentUser?.uid) {
+                        if (data.highestBidderUid && (data.highestBidderUid === currentUser?.uid || data.artistUid === currentUser?.uid)) {
                             processAuctionWin(id, data);
                         } else if (!data.highestBidderUid && data.artistUid === currentUser?.uid) {
                             processAuctionFail(id, data);
@@ -1042,58 +1117,71 @@
         }
 
         async function processAuctionWin(auctionId, data) {
-            const { db, appId, doc, updateDoc, addDoc, getDoc, collection } = window.FB;
+            const { db, appId, doc, runTransaction } = window.FB;
             if (!currentUser?.uid) return;
             if (processedSettlements.has(auctionId)) return;
             markSettlementProcessed(auctionId);
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed', closedAt: Date.now() });
-
                 const isWinner = currentUser.uid === data.highestBidderUid;
                 const isArtist = currentUser.uid === data.artistUid;
+                const auctionRef = doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId);
+                const winnerRef = doc(db, 'artifacts', appId, 'users', data.highestBidderUid, 'profile', 'data');
+                const artistRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'profile', 'data');
+                const purchaseRef = doc(db, 'artifacts', appId, 'users', data.highestBidderUid, 'purchased', auctionId);
+
+                await runTransaction(db, async (transaction) => {
+                    const auctionSnap = await transaction.get(auctionRef);
+                    if (!auctionSnap.exists() || auctionSnap.data().status === 'closed') return;
+                    const winnerSnap = await transaction.get(winnerRef);
+                    const artistSnap = await transaction.get(artistRef);
+                    if (!winnerSnap.exists() || !artistSnap.exists()) throw new Error('Auction profile is missing.');
+
+                    const winnerData = winnerSnap.data();
+                    const artistData = artistSnap.data();
+                    const artistUpdate = {
+                        points: (artistData.points || 0) + data.currentBid,
+                        soldCount: (artistData.soldCount || 0) + 1,
+                        highestBid: Math.max((artistData.highestBid || 0), data.currentBid)
+                    };
+                    if (data.currentBid >= (artistData.highestBid || 0)) {
+                        artistUpdate.highestBidImage = data.image;
+                        artistUpdate.highestBidTitle = data.title;
+                    }
+
+                    transaction.update(auctionRef, { status: 'closed', closedAt: Date.now(), settlementId: auctionId });
+                    transaction.set(purchaseRef, { auctionId, title: data.title, image: data.image, artist: data.artist, price: data.currentBid, createdAt: Date.now() });
+                    if (data.highestBidderUid === data.artistUid) {
+                        transaction.update(winnerRef, { ...artistUpdate, lockedPoints: Math.max(0, (winnerData.lockedPoints || 0) - data.currentBid) });
+                    } else {
+                        transaction.update(winnerRef, { lockedPoints: Math.max(0, (winnerData.lockedPoints || 0) - data.currentBid) });
+                        transaction.update(artistRef, artistUpdate);
+                    }
+                });
 
                 if (isWinner) {
-                    const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                    await updateDoc(myRef, { lockedPoints: Math.max(0, (userData.lockedPoints || 0) - data.currentBid) });
-                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'purchased'), {
-                        title: data.title, image: data.image, artist: data.artist, price: data.currentBid, createdAt: Date.now()
-                    });
                     queueSettlementAlert('낙찰 성공!', `축하합니다!\n[${data.title}] 작품을 최종 낙찰받았습니다.\n내 갤러리의 '소장한 작품'에서 확인할 수 있습니다.`, '🎉', data.image);
                 }
-
                 if (isArtist) {
                     queueSettlementAlert('작품 판매 완료', `축하합니다!\n[${data.title}] 작품이 ${data.highestBidder || '입찰자'}에게 ${data.currentBid}P에 판매되었습니다.`, '🏆', data.image);
-                }
-
-                const artistRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'profile', 'data');
-                const artistSnap = await getDoc(artistRef);
-                if(artistSnap.exists()) {
-                    const artistData = artistSnap.data();
-                    const newPoints = (artistData.points || 0) + data.currentBid;
-                    const newSoldCount = (artistData.soldCount || 0) + 1;
-                    const newHighestBid = Math.max((artistData.highestBid || 0), data.currentBid);
-
-                    let updatePayload = { points: newPoints, soldCount: newSoldCount, highestBid: newHighestBid };
-                    if (data.currentBid >= (artistData.highestBid || 0)) {
-                        updatePayload.highestBidImage = data.image;
-                        updatePayload.highestBidTitle = data.title;
-                    }
-                    await updateDoc(artistRef, updatePayload);
                 }
             } catch(e){ console.error("Win process error", e); }
         }
 
         async function processAuctionFail(auctionId, data) {
-            const { db, appId, doc, updateDoc, addDoc, collection } = window.FB;
+            const { db, appId, doc, runTransaction } = window.FB;
             if (!currentUser?.uid) return;
             if (processedSettlements.has(auctionId)) return;
             markSettlementProcessed(auctionId);
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed', closedAt: Date.now() });
+                const auctionRef = doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId);
+                const drawingRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'drawings', auctionId);
+                await runTransaction(db, async (transaction) => {
+                    const auctionSnap = await transaction.get(auctionRef);
+                    if (!auctionSnap.exists() || auctionSnap.data().status === 'closed') return;
+                    transaction.update(auctionRef, { status: 'closed', closedAt: Date.now(), settlementId: auctionId });
+                    transaction.set(drawingRef, { auctionId, title: data.title, image: data.image, createdAt: Date.now() });
+                });
                 if (currentUser.uid === data.artistUid) {
-                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings'), {
-                        title: data.title, image: data.image, createdAt: Date.now()
-                    });
                     queueSettlementAlert('경매 유찰 안내', `[${data.title}] 작품이 입찰자 없이 경매가 종료되어 보관함으로 반환되었습니다.`, '🕰️', data.image);
                 }
             } catch(e){}
@@ -1557,8 +1645,28 @@
             document.getElementById('lockedPoints').innerText = (userData.lockedPoints || 0).toLocaleString();
         }
 
+        function animatePointGain(startPoints, endPoints) {
+            const pointsEl = document.getElementById('userPoints');
+            if (!pointsEl) return;
+            clearInterval(pointDingTimer);
+            const steps = Math.max(2, Math.min(8, endPoints - startPoints));
+            let currentStep = 0;
+            pointsEl.classList.remove('points-ding');
+            void pointsEl.offsetWidth;
+            pointsEl.classList.add('points-ding');
+            pointDingTimer = setInterval(() => {
+                currentStep += 1;
+                const nextPoints = Math.round(startPoints + ((endPoints - startPoints) * currentStep / steps));
+                pointsEl.innerText = nextPoints.toLocaleString();
+                if (currentStep >= steps) {
+                    clearInterval(pointDingTimer);
+                    setTimeout(() => pointsEl.classList.remove('points-ding'), 850);
+                }
+            }, 85);
+        }
+
         window.switchTab = function(tabName) {
-            const views = ['home', 'draw', 'auction', 'gallery', 'settings'];
+            const views = ['home', 'draw', 'auction', 'gallery', 'points', 'settings'];
             views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
 
@@ -1586,7 +1694,356 @@
             if (tabName === 'gallery') {
                 renderGallery();
             }
+            if (tabName === 'points') {
+                initPencilSelectScene();
+                renderPencilGame();
+            }
         }
+
+        window.openPencilGame = function() {
+            document.getElementById('pointGameSelector').classList.add('hidden');
+            document.getElementById('pencilGamePanel').classList.remove('hidden');
+            document.getElementById('pencilCompletedSummary').classList.remove('hidden');
+            initPencilThreeScene();
+            renderPencilGame();
+        };
+
+        window.closePencilGame = function() {
+            document.getElementById('pencilGamePanel').classList.add('hidden');
+            document.getElementById('pointGameSelector').classList.remove('hidden');
+            document.getElementById('pencilCompletedSummary').classList.add('hidden');
+        };
+
+        function initPencilThreeScene() {
+            const canvas = document.getElementById('pencilThreeCanvas');
+            if (!canvas || !window.THREE) return;
+            if (pencilThree) {
+                resizePencilThreeScene();
+                return;
+            }
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+            camera.position.set(0, 1.1, 9);
+            camera.lookAt(0, 0, 0);
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+            scene.add(new THREE.HemisphereLight(0xfff4cf, 0x315b57, 2.4));
+            const keyLight = new THREE.DirectionalLight(0xffffff, 2.6);
+            keyLight.position.set(-3, 6, 6);
+            keyLight.castShadow = true;
+            scene.add(keyLight);
+            const rimLight = new THREE.DirectionalLight(0xffbb57, 1.4);
+            rimLight.position.set(5, 1, -4);
+            scene.add(rimLight);
+
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(18, 10),
+                new THREE.MeshStandardMaterial({ color: 0xb4844c, roughness: 0.78 })
+            );
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -1.1;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            const pencil = new THREE.Group();
+            pencil.rotation.z = 0;
+            pencil.position.set(-0.2, -0.15, 0);
+            scene.add(pencil);
+            const woodMaterial = new THREE.MeshStandardMaterial({ color: 0xc8955e, roughness: 0.72 });
+            const leadMaterial = new THREE.MeshStandardMaterial({ color: 0x181d27, metalness: 0.42, roughness: 0.3 });
+
+            const bodyGeometry = new THREE.CylinderGeometry(0.36, 0.36, 6, 8).toNonIndexed();
+            const bodyPositions = bodyGeometry.getAttribute('position');
+            const facetPalette = [0xf8cf56, 0xf0bd42, 0xe1a634, 0xd5962c, 0xe4aa36, 0xffd967, 0xe5ab35, 0xdca033];
+            const facetColors = new Float32Array(bodyPositions.count * 3);
+            for (let vertexIndex = 0; vertexIndex < bodyPositions.count; vertexIndex += 1) {
+                const angle = Math.atan2(bodyPositions.getZ(vertexIndex), bodyPositions.getX(vertexIndex));
+                const normalizedAngle = (angle + Math.PI * 2) % (Math.PI * 2);
+                const facetIndex = Math.min(7, Math.floor(normalizedAngle / (Math.PI / 4)));
+                const color = new THREE.Color(facetPalette[facetIndex]);
+                facetColors[vertexIndex * 3] = color.r;
+                facetColors[vertexIndex * 3 + 1] = color.g;
+                facetColors[vertexIndex * 3 + 2] = color.b;
+            }
+            bodyGeometry.setAttribute('color', new THREE.Float32BufferAttribute(facetColors, 3));
+            const yellowMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.05, roughness: 0.42, flatShading: true });
+            const body = new THREE.Mesh(bodyGeometry, yellowMaterial);
+            body.rotation.z = Math.PI / 2;
+            body.position.x = -1.7;
+            body.castShadow = true;
+            pencil.add(body);
+
+            const wood = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.4, 8), woodMaterial);
+            wood.rotation.z = -Math.PI / 2;
+            wood.position.x = 2;
+            wood.castShadow = true;
+            pencil.add(wood);
+
+            const lead = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.55, 16), leadMaterial);
+            lead.rotation.z = -Math.PI / 2;
+            lead.position.x = 2.48;
+            lead.castShadow = true;
+            lead.renderOrder = 1;
+            lead.material.depthTest = false;
+            pencil.add(lead);
+
+            pencilThree = { scene, camera, renderer, pencil, wood, lead, shavings: [], rollTarget: 0, rollAngle: 0, failUntil: 0, flyStart: 0, bonusSprayUntil: 0, nextBonusSpray: 0, frame: null };
+            resizePencilThreeScene();
+            animatePencilThreeScene();
+        }
+
+        function resizePencilThreeScene() {
+            if (!pencilThree) return;
+            const canvas = document.getElementById('pencilThreeCanvas');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            if (!width || !height) return;
+            pencilThree.renderer.setSize(width, height, false);
+            pencilThree.camera.aspect = width / height;
+            pencilThree.camera.updateProjectionMatrix();
+        }
+
+        function initPencilSelectScene() {
+            const canvas = document.getElementById('pencilSelectThreeCanvas');
+            if (!canvas || !window.THREE) return;
+            if (pencilSelectThree) {
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                pencilSelectThree.renderer.setSize(width, height, false);
+                pencilSelectThree.camera.aspect = width / height;
+                pencilSelectThree.camera.updateProjectionMatrix();
+                return;
+            }
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+            camera.position.set(0.25, 0.55, 3.9);
+            camera.lookAt(0.25, 0, 0);
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            scene.add(new THREE.HemisphereLight(0xfff5d6, 0x538165, 2.5));
+            const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            keyLight.position.set(-3, 5, 7);
+            scene.add(keyLight);
+
+            const pencil = new THREE.Group();
+            pencil.rotation.z = 0;
+            pencil.position.set(-0.35, -0.15, 0);
+            scene.add(pencil);
+            const bodyGeometry = new THREE.CylinderGeometry(0.36, 0.36, 6, 8).toNonIndexed();
+            const positions = bodyGeometry.getAttribute('position');
+            const palette = [0xf8cf56, 0xf0bd42, 0xe1a634, 0xd5962c, 0xe4aa36, 0xffd967, 0xe5ab35, 0xdca033];
+            const colors = new Float32Array(positions.count * 3);
+            for (let index = 0; index < positions.count; index += 1) {
+                const angle = Math.atan2(positions.getZ(index), positions.getX(index));
+                const facet = Math.min(7, Math.floor(((angle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)));
+                const color = new THREE.Color(palette[facet]);
+                colors[index * 3] = color.r;
+                colors[index * 3 + 1] = color.g;
+                colors[index * 3 + 2] = color.b;
+            }
+            bodyGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            const body = new THREE.Mesh(bodyGeometry, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.42 }));
+            body.rotation.z = Math.PI / 2;
+            body.position.x = -1.7;
+            pencil.add(body);
+            const wood = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0xc8955e, roughness: 0.72 }));
+            wood.rotation.z = -Math.PI / 2;
+            wood.position.x = 2;
+            pencil.add(wood);
+            const lead = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.55, 16), new THREE.MeshStandardMaterial({ color: 0x181d27, metalness: 0.42, roughness: 0.3 }));
+            lead.rotation.z = -Math.PI / 2;
+            lead.position.x = 2.48;
+            lead.material.depthTest = false;
+            pencil.add(lead);
+
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            renderer.setSize(width, height, false);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.render(scene, camera);
+            pencilSelectThree = { scene, camera, renderer };
+        }
+
+        function createPencilShavings(amount, countOverride = null) {
+            if (!pencilThree) return;
+            const material = new THREE.MeshStandardMaterial({ color: 0xf1c981, roughness: 0.8 });
+            const count = countOverride || (amount === 10 ? 560 : amount === 2 ? 55 : 10);
+            const particleBoost = amount === 10 ? 5.2 : amount === 2 ? 3 : 1;
+            for (let index = 0; index < count; index += 1) {
+                const shaving = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.025, 6, 8, Math.PI * 1.3), material);
+                shaving.position.set(1.65, -0.02, 0);
+                shaving.rotation.set(Math.random() * 2, Math.random() * 2, Math.random() * 2);
+                pencilThree.scene.add(shaving);
+                pencilThree.shavings.push({
+                    mesh: shaving,
+                    velocity: new THREE.Vector3((Math.random() - 0.2) * 2.4 * particleBoost, (Math.random() * 2 + 0.6) * particleBoost, (Math.random() - 0.5) * 2 * particleBoost),
+                    createdAt: performance.now(),
+                    settledAt: 0,
+                    lifetime: amount === 10 ? 4000 : amount === 2 ? 1600 : 1100
+                });
+            }
+        }
+
+        function playPencilRoll(amount) {
+            if (!pencilThree) return;
+            pencilThree.rollTarget += Math.PI / 4 * amount;
+            pencilThree.rollEase = amount === 10 ? 0.48 : amount === 2 ? 0.32 : 0.2;
+            createPencilShavings(amount);
+            if (amount === 10) {
+                pencilThree.bonusSprayUntil = performance.now() + 1600;
+                pencilThree.nextBonusSpray = performance.now() + 100;
+            }
+        }
+
+        function playPencilFail() {
+            if (pencilThree) pencilThree.failUntil = performance.now() + 260;
+        }
+
+        function flyPencilAway() {
+            if (pencilThree) pencilThree.flyStart = performance.now();
+        }
+
+        function resetPencilThree() {
+            if (!pencilThree) return;
+            pencilThree.pencil.position.set(-0.2, -0.15, 0);
+            pencilThree.pencil.rotation.set(0, 0, 0);
+            pencilThree.rollAngle = 0;
+            pencilThree.rollTarget = 0;
+            pencilThree.rollEase = 0.2;
+            pencilThree.flyStart = 0;
+            pencilThree.bonusSprayUntil = 0;
+            pencilThree.pencil.scale.set(1, 1, 1);
+        }
+
+        function animatePencilThreeScene() {
+            if (!pencilThree) return;
+            const now = performance.now();
+            const three = pencilThree;
+            resizePencilThreeScene();
+            three.rollAngle += (three.rollTarget - three.rollAngle) * (three.rollEase || 0.2);
+            three.pencil.rotation.x = three.rollAngle;
+            three.pencil.rotation.z = 0;
+            if (three.failUntil > now) {
+                three.pencil.position.x = -0.2 + Math.sin(now * 0.06) * 0.035;
+                three.pencil.position.y = -0.15;
+            } else if (!three.flyStart) {
+                three.pencil.position.x += (-0.2 - three.pencil.position.x) * 0.2;
+                three.pencil.position.y = -0.15;
+            }
+            if (three.flyStart) {
+                const progress = Math.min(1, (now - three.flyStart) / 1800);
+                three.pencil.position.x = -0.2 + progress * 18;
+                three.pencil.position.y = -0.15 + progress * progress * 10;
+                three.pencil.position.z = progress * 18;
+                three.pencil.rotation.z = -progress * 3.8;
+                const scale = 1 - progress * 0.86;
+                three.pencil.scale.set(scale, scale, scale);
+            }
+            if (three.bonusSprayUntil > now && now >= three.nextBonusSpray) {
+                createPencilShavings(10, 44);
+                three.nextBonusSpray = now + 110;
+            }
+            three.shavings = three.shavings.filter((shaving) => {
+                const age = now - shaving.createdAt;
+                if (!shaving.settledAt) {
+                    shaving.velocity.y -= 0.022;
+                    shaving.velocity.multiplyScalar(0.993);
+                    shaving.mesh.position.addScaledVector(shaving.velocity, 0.018);
+                    shaving.mesh.rotation.x += 0.12;
+                    shaving.mesh.rotation.z += 0.09;
+                    if (shaving.mesh.position.y <= -0.98) {
+                        shaving.mesh.position.y = -0.98;
+                        shaving.velocity.set(0, 0, 0);
+                        shaving.settledAt = now;
+                    }
+                }
+                const settledTooLong = shaving.settledAt && (now - shaving.settledAt) > 45000;
+                if (age > shaving.lifetime || settledTooLong) { three.scene.remove(shaving.mesh); return false; }
+                return true;
+            });
+            while (three.shavings.length > 1200) {
+                const oldest = three.shavings.shift();
+                three.scene.remove(oldest.mesh);
+            }
+            three.renderer.render(three.scene, three.camera);
+            three.frame = requestAnimationFrame(animatePencilThreeScene);
+        }
+
+        function renderPencilGame() {
+            const completedCount = document.getElementById('pencilCompletedCount');
+            const stepBadge = document.getElementById('pencilStepBadge');
+            if (!completedCount || !stepBadge) return;
+
+            completedCount.innerText = userData.pencilSharpenedCount || 0;
+            stepBadge.innerText = `${pencilSharpeningStep} / 100`;
+        }
+
+        async function awardPencilPoints(amount) {
+            if (!currentUser?.uid || amount <= 0) return;
+            const previousPoints = userData.points || 0;
+            userData.points = (userData.points || 0) + amount;
+            animatePointGain(previousPoints, userData.points);
+            const { db, appId, doc, updateDoc } = window.FB;
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { points: userData.points });
+            } catch (error) {
+                console.error('Pencil reward error', error);
+            }
+        }
+
+        window.sharpenPencil = async function() {
+            if (pencilGameBusy) return;
+
+            pencilGameBusy = true;
+            const roll = Math.random();
+            const amount = roll < 0.05 ? 10 : roll < 0.25 ? 2 : roll < 0.55 ? 0 : 1;
+
+            if (amount === 0) {
+                playPencilFail();
+                setTimeout(() => { pencilGameBusy = false; }, 120);
+                return;
+            }
+
+            const actualAmount = Math.min(amount, 100 - pencilSharpeningStep);
+            playPencilRoll(actualAmount);
+            pencilSharpeningStep += actualAmount;
+            pencilSessionPoints += actualAmount;
+            renderPencilGame();
+            await awardPencilPoints(actualAmount);
+
+            setTimeout(async () => {
+                if (pencilSharpeningStep < 100) {
+                    pencilGameBusy = false;
+                    return;
+                }
+
+                flyPencilAway();
+                userData.pencilSharpenedCount = (userData.pencilSharpenedCount || 0) + 1;
+                renderPencilGame();
+                try {
+                    const { db, appId, doc, updateDoc } = window.FB;
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { pencilSharpenedCount: userData.pencilSharpenedCount });
+                } catch (error) {
+                    console.error('Pencil count error', error);
+                }
+
+                setTimeout(() => {
+                    pencilSharpeningStep = 0;
+                    pencilSessionPoints = 0;
+                    resetPencilThree();
+                    renderPencilGame();
+                    pencilGameBusy = false;
+                }, 2000);
+            }, 120);
+        };
 
         // ========================================== //
         // ====== 커스텀 컬러 피커 및 스튜디오 핵심 로직 ====== //
@@ -1740,11 +2197,17 @@
         function initCanvas() {
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             saveState(); 
-            
-            canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', drawing); window.addEventListener('mouseup', stopDraw);
-            canvas.addEventListener('touchstart', (e)=>{e.preventDefault(); startDraw(e)}, {passive: false});
-            canvas.addEventListener('touchmove', (e)=>{e.preventDefault(); drawing(e)}, {passive: false});
-            window.addEventListener('touchend', stopDraw);
+
+            canvas.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'touch' || e.pointerType === 'pen') e.preventDefault();
+                updateBrushCursor(e);
+                startDraw(e);
+                if (isDrawing) canvas.setPointerCapture?.(e.pointerId);
+            });
+            canvas.addEventListener('pointermove', drawing);
+            canvas.addEventListener('pointerup', stopDraw);
+            canvas.addEventListener('pointercancel', stopDraw);
+            canvas.addEventListener('pointerleave', hideBrushCursor);
         }
 
         window.toggleShapeMenu = function(e) {
@@ -1802,10 +2265,30 @@
             };
         }
 
+        function updateBrushCursor(e) {
+            const brushCursor = document.getElementById('brushCursor');
+            if (!brushCursor || e.pointerType === 'touch' || tfMode || !['pen', 'eraser'].includes(currentTool)) {
+                hideBrushCursor();
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const diameter = Math.max(4, currentLineWidth * (rect.width / canvas.width));
+            brushCursor.style.width = `${diameter}px`;
+            brushCursor.style.height = `${diameter}px`;
+            brushCursor.style.left = `${e.clientX - rect.left}px`;
+            brushCursor.style.top = `${e.clientY - rect.top}px`;
+            brushCursor.style.backgroundColor = currentTool === 'eraser' ? 'rgba(255, 255, 255, 0.35)' : hexToRgbaStr(baseColor, Math.min(currentOpacity, 0.35));
+            brushCursor.style.display = 'block';
+        }
+
+        function hideBrushCursor() {
+            const brushCursor = document.getElementById('brushCursor');
+            if (brushCursor) brushCursor.style.display = 'none';
+        }
+
         function shouldBlockDrawing(e) {
             if (!applePencilOnly) return false;
-            const pointerType = e.pointerType || (e.touches ? 'touch' : 'mouse');
-            return pointerType !== 'pen';
+            return e.pointerType !== 'pen';
         }
 
         function floodFill(x, y, fillColorStr) {
@@ -1889,6 +2372,7 @@
             ctx.lineWidth = currentLineWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         }
         function drawing(e) {
+            updateBrushCursor(e);
             if(!isDrawing || tfMode || currentTool === 'bucket') return;
             if (shouldBlockDrawing(e)) return;
             const pos = getCoordinates(e);
@@ -1900,6 +2384,7 @@
 
         window.setTool = function(tool) {
             currentTool = tool;
+            hideBrushCursor();
             document.querySelectorAll('.tool-btn').forEach(btn => { btn.classList.remove('bg-emerald-500', 'text-white'); btn.classList.add('bg-slate-100', 'text-slate-600'); });
             document.getElementById(`tool-${tool}`).classList.replace('bg-slate-100', 'bg-emerald-500');
             document.getElementById(`tool-${tool}`).classList.replace('text-slate-600', 'text-white');
