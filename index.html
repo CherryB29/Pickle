@@ -15,7 +15,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts (Noto Sans KR) -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="./three.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js'"></script>
+    <script src="./three.min.js"></script>
+    <script>
+        if (!window.THREE) {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"><\\/script>');
+        }
+    </script>
     
     <!-- Firebase SDK (v11.6.1) 연동 -->
     <script type="module">
@@ -283,7 +288,7 @@
         <!-- 헤더 -->
         <header id="appHeader" class="hidden sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 py-3 justify-between items-center flex-shrink-0">
             <div class="flex items-center gap-2 cursor-pointer" onclick="switchTab('home')">
-                <div class="w-8 h-8 bg-emerald-500 rounded-2xl flex items-center justify-center text-white text-lg font-black shadow-md">🥒</div>
+                <div class="w-8 h-8 bg-white rounded-2xl border border-slate-100 flex items-center justify-center text-lg font-black shadow-md">🥒</div>
                 <span class="text-xl font-black tracking-tight text-slate-800">Pickle</span>
             </div>
             
