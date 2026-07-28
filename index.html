@@ -67,6 +67,7 @@
 
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: { sans: ['Noto Sans KR', 'sans-serif'] },
@@ -87,6 +88,7 @@
             background-color: #f1f5f9;
             touch-action: manipulation;
             overscroll-behavior-y: none;
+            transition: background-color 0.3s ease;
         }
         .app-container {
             max-width: 480px;
@@ -98,6 +100,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            transition: background-color 0.3s ease;
         }
         .canvas-container { touch-action: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -158,11 +161,27 @@
             pointer-events: none;
         }
         
+        /* 다크모드 커스텀 CSS 강제 덮어쓰기 */
+        html.dark { background-color: #0f172a; }
+        html.dark .app-container { background-color: #1e293b; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+        html.dark .bg-white { background-color: #1e293b !important; }
+        html.dark .bg-slate-50 { background-color: #334155 !important; }
+        html.dark .bg-slate-100 { background-color: #0f172a !important; }
+        html.dark .bg-slate-200\/50 { background-color: rgba(51, 65, 85, 0.5) !important; }
+        html.dark .text-slate-800 { color: #f8fafc !important; }
+        html.dark .text-slate-700 { color: #e2e8f0 !important; }
+        html.dark .text-slate-600 { color: #cbd5e1 !important; }
+        html.dark .text-slate-500 { color: #94a3b8 !important; }
+        html.dark .text-slate-400 { color: #64748b !important; }
+        html.dark .border-slate-100, html.dark .border-slate-200, html.dark .border-slate-300 { border-color: #475569 !important; }
+        html.dark #appNav { background-color: rgba(30, 41, 59, 0.95) !important; border-top-color: #475569 !important; }
+        html.dark #appHeader { background-color: rgba(30, 41, 59, 0.9) !important; border-bottom-color: #475569 !important; }
+        html.dark canvas { background-color: #ffffff; } /* 캔버스 내부는 하얗게 유지 */
     </style>
 </head>
-<body class="bg-slate-100 relative">
+<body class="bg-slate-100 relative transition-colors duration-300">
 
-    <div class="app-container">
+    <div class="app-container transition-colors duration-300">
 
         <!-- 0. LOGIN VIEW -->
         <section id="view-login" class="flex-1 flex flex-col items-center justify-center bg-slate-50 px-6 absolute inset-0 z-50 overflow-y-auto py-8">
@@ -271,7 +290,6 @@
 
                 <div class="flex items-center justify-between pt-2">
                     <h3 class="text-lg font-bold text-slate-800">주요 서비스</h3>
-                    <span id="authBadge" class="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full border border-emerald-100"><i class="fa-solid fa-circle-check"></i> 접속 완료</span>
                 </div>
 
                 <div class="grid grid-cols-1 gap-4">
@@ -285,26 +303,25 @@
                     </button>
                     <button onclick="switchTab('gallery')" class="w-full bg-sky-500 hover:bg-sky-600 text-white rounded-2xl p-5 shadow-lg shadow-sky-500/25 flex flex-col items-center justify-center min-h-[100px] text-center">
                         <span class="text-xl font-extrabold tracking-tight">내 갤러리</span>
-                        <span class="text-xs text-sky-100 mt-1 font-medium">소장품 및 미판매 작품 보관함</span>
+                        <span class="text-xs text-sky-100 mt-1 font-medium">소장품 및 미판매 보관함</span>
                     </button>
                 </div>
             </section>
 
-            <!-- 2. DRAWING STUDIO (모바일 반응형 높이 제약 완벽 해결) -->
-            <section id="view-draw" class="hidden absolute inset-0 px-4 pt-3 pb-20 flex flex-col overflow-y-auto no-scrollbar bg-slate-50">
+            <!-- 2. DRAWING STUDIO -->
+            <section id="view-draw" class="hidden absolute inset-0 px-4 pt-3 pb-24 flex flex-col overflow-y-auto no-scrollbar bg-slate-50">
                 <div class="flex justify-between items-center mb-2 flex-shrink-0">
                     <h2 class="text-lg font-bold text-slate-800">스튜디오</h2>
                     <div class="flex gap-1.5">
                         <button onclick="undo()" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-left"></i></button>
                         <button onclick="redo()" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-right"></i></button>
-                        <button onclick="clearCanvas()" class="px-2 py-1.5 bg-white border border-slate-200 text-rose-500 rounded-xl text-xs font-bold shadow-sm hover:bg-rose-50 active:scale-95"><i class="fa-solid fa-trash-can"></i></button>
+                        <button onclick="confirmClearCanvas()" class="px-2 py-1.5 bg-white border border-slate-200 text-rose-500 rounded-xl text-xs font-bold shadow-sm hover:bg-rose-50 active:scale-95"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
                 </div>
 
-                <!-- 캔버스 영역 (비율 왜곡 및 겹침 해결을 위한 레이아웃 적용) -->
-                <div class="flex-1 w-full flex items-center justify-center min-h-0 mb-3 overflow-hidden">
-                    <!-- 종횡비 1:1 유지 및 부모 크기 안 넘어가게 -->
-                    <div style="aspect-ratio: 1 / 1; max-height: 100%; max-width: 100%;" class="relative bg-white border-2 border-slate-200 rounded-2xl shadow-sm flex-shrink-0 w-full">
+                <!-- 캔버스 영역 -->
+                <div class="w-full min-h-0 relative mb-2 flex justify-center items-center flex-shrink-0 max-h-[50vh]">
+                    <div class="relative bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-shrink-0 aspect-square w-full h-full max-h-full mx-auto" style="max-height: 45vh;">
                         <canvas id="paintCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
                         <canvas id="overlayCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
 
@@ -319,7 +336,7 @@
                     </div>
                 </div>
 
-                <!-- 툴바 영역 (flex-wrap으로 가로 스크롤 이슈 및 팝업 잘림 해결) -->
+                <!-- 툴바 영역 -->
                 <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2.5 flex-shrink-0 relative">
                     <!-- 도구 모음 -->
                     <div class="flex flex-wrap items-center justify-center gap-1.5">
@@ -347,7 +364,7 @@
                         </label>
                     </div>
                     
-                    <!-- 선/투명도 조절 영역 (2줄 레이아웃) -->
+                    <!-- 선/투명도 조절 영역 -->
                     <div class="flex items-center gap-3 pt-2 border-t border-slate-100 mt-1">
                         <!-- 컬러 피커 트리거 버튼 -->
                         <div class="flex items-center justify-center gap-1.5 cursor-pointer bg-slate-50 px-2 py-2 rounded-xl active:scale-95 border border-slate-200 flex-shrink-0 h-[46px]" onclick="openColorPicker()">
@@ -379,9 +396,12 @@
                 </div>
                 
                 <!-- 프로필 적용용 전용 버튼 -->
-                <div id="studioProfileBtns" class="hidden flex-col gap-2 mt-3 flex-shrink-0">
-                    <button onclick="setProfilePicture()" class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-[13px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-id-badge text-sm"></i> 내 프로필 사진으로 적용하기
+                <div id="studioProfileBtns" class="hidden grid-cols-2 gap-2 mt-3 flex-shrink-0">
+                    <button onclick="saveCanvasToGallery()" class="py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-[11px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-download text-sm"></i> 보관함 저장
+                    </button>
+                    <button onclick="setProfilePicture()" class="py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-[11px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-id-badge text-sm"></i> 프로필로 적용
                     </button>
                 </div>
             </section>
@@ -391,7 +411,6 @@
                 <div class="flex justify-between items-center">
                     <div>
                         <h2 class="text-xl font-bold text-slate-800">실시간 경매</h2>
-                        <p class="text-xs text-slate-500">6시간 경매 라이브 마켓 (그림을 누르면 크게 확대)</p>
                     </div>
                 </div>
                 <div id="auctionList" class="space-y-4">
@@ -445,6 +464,13 @@
                     <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors" onclick="changeNickname()">
                         <span class="font-semibold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-user-pen text-emerald-500 w-5"></i> 닉네임 변경</span>
                         <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>
+                    </div>
+                    <div class="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <span class="font-semibold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-moon text-indigo-500 w-5"></i> 다크 모드</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="darkModeToggle" class="sr-only peer" onchange="toggleDarkMode()">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
                     </div>
                     <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-rose-50 transition-colors text-rose-500 font-bold" onclick="showLogoutModal()">
                         <span class="flex items-center gap-2"><i class="fa-solid fa-right-from-bracket w-5"></i> 로그아웃</span>
@@ -514,6 +540,39 @@
             </div>
 
             <button onclick="applyColorPicker()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md active:scale-95 transition-transform mt-2">이 색상 사용하기</button>
+        </div>
+    </div>
+
+    <!-- 작가 프로필 정보 조회 모달 -->
+    <div id="artistProfileModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center p-4" onclick="closeArtistProfile()">
+        <div class="bg-white rounded-3xl max-w-[320px] w-full p-6 shadow-2xl space-y-4" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start">
+                <div class="w-16 h-16 bg-emerald-100 rounded-full border-2 border-emerald-500 overflow-hidden flex items-center justify-center text-2xl shadow-sm" id="artistModalImg">🥒</div>
+                <button onclick="closeArtistProfile()" class="text-slate-400 text-xl active:scale-90"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div>
+                <h3 id="artistModalName" class="font-black text-2xl text-slate-800">작가이름</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Pickle Creator</p>
+            </div>
+            
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 mt-2 flex gap-3 items-center">
+                <div id="artistHighestBidImgBox" class="w-14 h-14 bg-slate-200 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] text-slate-400 font-bold border border-slate-200">
+                    <img id="artistHighestBidImg" src="" class="w-full h-full object-cover hidden">
+                    <span id="artistHighestBidEmpty">기록 없음</span>
+                </div>
+                <div class="flex-1 overflow-hidden">
+                    <p class="text-[10px] font-bold text-slate-400 mb-0.5">최고가 낙찰 작품</p>
+                    <p id="artistHighestBidTitle" class="text-xs font-bold text-slate-700 truncate">-</p>
+                    <p class="text-lg font-black text-rose-500 mt-0.5"><span id="artistModalHighestBid">0</span><span class="text-[10px] font-bold text-rose-400 ml-0.5">P</span></p>
+                </div>
+            </div>
+
+            <div class="flex bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <div class="flex-1">
+                    <p class="text-[10px] font-bold text-slate-400 mb-1">총 판매된 작품</p>
+                    <p class="text-lg font-black text-emerald-600"><span id="artistModalSoldCount">0</span><span class="text-[10px] font-bold text-emerald-400 ml-0.5">개</span></p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -598,7 +657,7 @@
         </div>
     </div>
 
-    <!-- 토스트 알림 (모던 UI 개편) -->
+    <!-- 토스트 알림 (모던 UI) -->
     <div id="toast" class="fixed top-20 left-1/2 z-[100] bg-slate-800/95 backdrop-blur-sm text-white px-5 py-3 rounded-2xl text-[13px] font-medium shadow-2xl flex items-center gap-2 border border-slate-700 break-keep">
         <i class="fa-solid fa-circle-check text-emerald-400 flex-shrink-0 text-base"></i>
         <span id="toastMsg" class="leading-tight text-left">메시지</span>
@@ -608,7 +667,7 @@
     <script>
         // 전역 상태 변수
         let currentUser = null;
-        let userData = { points: 1250, lockedPoints: 0, nickname: '작가', lastCheckInDate: '', profileImage: '' };
+        let userData = { points: 1250, lockedPoints: 0, nickname: '작가', lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0 };
         let pendingSignupNickname = '';
         
         let myDrawingsList = [];
@@ -617,7 +676,7 @@
         let auctionTimerInterval = null; 
         const SIX_HOURS_MS = 6 * 60 * 60 * 1000; 
 
-        // 캔버스 도구 변수
+        // 캔버스 변수
         let currentTool = 'pen';
         let baseColor = '#000000';
         let currentOpacity = 1;
@@ -629,7 +688,6 @@
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
-        // Undo / Redo 스택
         let undoStack = [];
         let redoStack = [];
 
@@ -642,17 +700,16 @@
         let tfImgObj = null;
         let tfText = "텍스트";
         
-        // 선(Line) 전용 편집 변수
+        // 선(Line) 전용 변수
         let lineStartX = 50, lineStartY = 50, lineEndX = 150, lineEndY = 150;
 
         let isTfDragging = false;
         let tfAction = null;
         let lastTfPos = {x: 0, y: 0};
 
-        // 색상 즐겨찾기 관련 변수
         let favColors = ['#000000', '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
 
-        // UI & 헬퍼 함수
+        // UI 헬퍼
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toastMsg').innerText = msg;
@@ -672,7 +729,6 @@
             } else {
                 imgBox.classList.add('hidden');
             }
-
             document.getElementById('alertModal').classList.remove('hidden');
         }
 
@@ -702,7 +758,16 @@
             return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
 
-        // 앱 초기화
+        window.toggleDarkMode = function() {
+            const html = document.documentElement;
+            if (document.getElementById('darkModeToggle').checked) {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+        };
+
+        // 앱 로드
         window.addEventListener('load', () => {
             initCanvas();
             setupImageTransformEvents();
@@ -752,7 +817,7 @@
                             }
                         } else {
                             const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
-                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '' };
+                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0 };
                             setDoc(userRef, newProfile);
                             pendingSignupNickname = '';
                         }
@@ -761,6 +826,7 @@
                     subscribeAuctions();
                     subscribeMyDrawings();
                     subscribePurchasedArts(); 
+                    switchTab('home'); // 초기 탭 홈으로
                 } else {
                     document.getElementById('view-login').classList.remove('hidden');
                     document.getElementById('appHeader').classList.add('hidden');
@@ -786,7 +852,7 @@
             }
         }
 
-        // 인증 로직
+        // 인증 로직 (생략)
         async function handleEmailLogin(e) {
             e.preventDefault();
             const email = document.getElementById('loginEmail').value.trim();
@@ -834,8 +900,8 @@
             } catch (err) { showToast("접속 중 오류가 발생했습니다."); }
         }
 
-        function showLogoutModal() { document.getElementById('logoutModal').classList.remove('hidden'); }
-        async function executeLogout() {
+        window.showLogoutModal = function() { document.getElementById('logoutModal').classList.remove('hidden'); }
+        window.executeLogout = async function() {
             document.getElementById('logoutModal').classList.add('hidden');
             try { await window.FB.signOut(window.FB.auth); showToast("안전하게 로그아웃 되었습니다."); } catch(e) {}
         }
@@ -870,11 +936,21 @@
                 const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
                 await updateDoc(myRef, { lockedPoints: Math.max(0, (userData.lockedPoints || 0) - data.currentBid) });
 
+                // 원작자 수익금 및 판매 통계(highestBid 등) 업데이트
                 const artistRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'profile', 'data');
                 const artistSnap = await getDoc(artistRef);
                 if(artistSnap.exists()) {
                     const artistData = artistSnap.data();
-                    await updateDoc(artistRef, { points: (artistData.points || 0) + data.currentBid });
+                    const newPoints = (artistData.points || 0) + data.currentBid;
+                    const newSoldCount = (artistData.soldCount || 0) + 1;
+                    const newHighestBid = Math.max((artistData.highestBid || 0), data.currentBid);
+                    
+                    let updatePayload = { points: newPoints, soldCount: newSoldCount, highestBid: newHighestBid };
+                    if (data.currentBid >= (artistData.highestBid || 0)) {
+                        updatePayload.highestBidImage = data.image;
+                        updatePayload.highestBidTitle = data.title;
+                    }
+                    await updateDoc(artistRef, updatePayload);
                 }
 
                 await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'purchased'), {
@@ -902,7 +978,9 @@
                 myDrawingsList = [];
                 snapshot.forEach(docSnap => myDrawingsList.push({ id: docSnap.id, ...docSnap.data() }));
                 myDrawingsList.sort((a, b) => b.createdAt - a.createdAt);
-                renderGallery();
+                if (!document.getElementById('view-gallery').classList.contains('hidden') && activeGalleryTab === 'my-drawings') {
+                    renderGallery();
+                }
             }, err => console.error(err));
         }
 
@@ -913,7 +991,9 @@
                 purchasedArtList = [];
                 snapshot.forEach(docSnap => purchasedArtList.push({ id: docSnap.id, ...docSnap.data() }));
                 purchasedArtList.sort((a, b) => b.createdAt - a.createdAt);
-                renderGallery();
+                if (!document.getElementById('view-gallery').classList.contains('hidden') && activeGalleryTab === 'purchased') {
+                    renderGallery();
+                }
             }, err => console.error(err));
         }
 
@@ -936,7 +1016,7 @@
             } catch(e) { console.error("Like toggle error", e); }
         };
 
-        async function saveCanvasToGallery() {
+        window.saveCanvasToGallery = async function() {
             if (!currentUser) return showToast("연결 대기 중입니다.");
             if (undoStack.length <= 1) return showToast("그림을 먼저 그려주세요!");
 
@@ -955,13 +1035,14 @@
 
         window.setProfileFromGallery = async function(image) {
             if (!currentUser) return showToast("연결 대기 중입니다.");
+            if (!confirm("이 작품을 프로필 사진으로 설정하시겠습니까?")) return;
+            
             const { db, appId, doc, updateDoc, collection, getDocs } = window.FB;
             try {
                 await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), {
                     profileImage: image
                 });
 
-                // 내 출품작 작가 이미지 일괄 업데이트
                 const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'auctions'));
                 snap.forEach(d => {
                     if(d.data().artistUid === currentUser.uid) {
@@ -978,7 +1059,7 @@
         window.prepareProfileDrawing = function() {
             switchTab('draw');
             document.getElementById('studioNormalBtns').style.display = 'none';
-            document.getElementById('studioProfileBtns').style.display = 'flex';
+            document.getElementById('studioProfileBtns').style.display = 'grid';
             document.getElementById('studioProfileBtns').classList.remove('hidden');
             showToast('나만의 멋진 프로필 사진을 캔버스에 직접 그려보세요!');
         };
@@ -1009,7 +1090,7 @@
             }
         };
 
-        async function submitAuction() {
+        window.submitAuction = async function() {
             if (!currentUser) return;
             const { db, appId, collection, addDoc, doc, updateDoc, deleteDoc } = window.FB;
             const title = document.getElementById('auctionTitle').value.trim() || '무제 피클';
@@ -1059,7 +1140,7 @@
             } catch(e) { showToast("삭제 중 오류가 발생했습니다."); }
         };
 
-        async function placeBid(id, currentBidAmount) {
+        window.placeBid = async function(id, currentBidAmount) {
             if (!currentUser) return;
             const { db, appId, doc, getDoc, updateDoc } = window.FB;
             const targetAuction = auctionItemsList.find(a => a.id === id);
@@ -1104,7 +1185,7 @@
             } catch (e) { showToast("입찰 처리 중 오류가 발생했습니다."); }
         }
 
-        async function claimDailyReward() {
+        window.claimDailyReward = async function() {
             if (!currentUser) return;
             const today = getTodayStr();
             if (userData.lastCheckInDate === today) return showToast('오늘 출석 보상을 이미 수령하셨습니다.');
@@ -1118,12 +1199,12 @@
             } catch (e) { showToast('출석 처리 중 오류가 발생했습니다.'); }
         }
 
-        function changeNickname() {
+        window.changeNickname = function() {
             document.getElementById('nicknameModal').classList.remove('hidden');
             document.getElementById('newNicknameInput').value = userData.nickname || '';
         }
         
-        async function saveNickname() {
+        window.saveNickname = async function() {
             if (!currentUser) return;
             const newName = document.getElementById('newNicknameInput').value.trim();
             if(!newName) return;
@@ -1151,9 +1232,47 @@
             document.getElementById('zoomArtist').innerText = `by ${artist}`;
             document.getElementById('imageZoomModal').classList.remove('hidden');
         };
-        function closeImageZoomModal() {
+        window.closeImageZoomModal = function() {
             document.getElementById('imageZoomModal').classList.add('hidden');
         }
+
+        // 작가 정보 모달
+        window.openArtistProfile = async function(uid) {
+            if(!uid) return;
+            const { db, appId, doc, getDoc } = window.FB;
+            try {
+                const artistRef = doc(db, 'artifacts', appId, 'users', uid, 'profile', 'data');
+                const snap = await getDoc(artistRef);
+                if(snap.exists()) {
+                    const data = snap.data();
+                    document.getElementById('artistModalName').innerText = data.nickname || '작가';
+                    document.getElementById('artistModalHighestBid').innerText = (data.highestBid || 0).toLocaleString();
+                    document.getElementById('artistModalSoldCount').innerText = (data.soldCount || 0).toLocaleString();
+                    
+                    if (data.profileImage) {
+                        document.getElementById('artistModalImg').innerHTML = `<img src="${data.profileImage}" class="w-full h-full object-cover">`;
+                    } else {
+                        document.getElementById('artistModalImg').innerHTML = `🥒`;
+                    }
+
+                    if (data.highestBidImage) {
+                        document.getElementById('artistHighestBidImg').src = data.highestBidImage;
+                        document.getElementById('artistHighestBidImg').classList.remove('hidden');
+                        document.getElementById('artistHighestBidEmpty').classList.add('hidden');
+                        document.getElementById('artistHighestBidTitle').innerText = data.highestBidTitle || '-';
+                    } else {
+                        document.getElementById('artistHighestBidImg').classList.add('hidden');
+                        document.getElementById('artistHighestBidEmpty').classList.remove('hidden');
+                        document.getElementById('artistHighestBidTitle').innerText = '-';
+                    }
+
+                    document.getElementById('artistProfileModal').classList.remove('hidden');
+                }
+            } catch(e) { console.error(e); showToast('작가 정보를 불러올 수 없습니다.'); }
+        };
+        window.closeArtistProfile = function() {
+            document.getElementById('artistProfileModal').classList.add('hidden');
+        };
 
         function renderAuctions() {
             const container = document.getElementById('auctionList');
@@ -1179,7 +1298,7 @@
                 
                 const profileImgHtml = item.artistProfileImage 
                     ? `<img src="${item.artistProfileImage}" class="w-full h-full object-cover">`
-                    : `<span class="text-[8px] flex items-center justify-center h-full w-full">🥒</span>`;
+                    : `<span class="text-[12px] flex items-center justify-center h-full w-full">🥒</span>`;
 
                 const card = document.createElement('div');
                 card.className = 'bg-white border border-slate-100 rounded-3xl p-4 shadow-soft space-y-3';
@@ -1196,14 +1315,14 @@
                         </button>
                     </div>
                     <div>
-                        <div class="flex justify-between items-start mt-1">
+                        <div class="flex justify-between items-start mt-2">
                             <div class="flex-1 truncate pr-2">
                                 <h3 class="font-bold text-slate-800 text-base truncate">${item.title}</h3>
-                                <div class="flex items-center gap-1 mt-0.5">
-                                    <div class="w-4 h-4 rounded-full bg-emerald-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
+                                <div class="flex items-center gap-2 mt-1.5 cursor-pointer w-max hover:opacity-80 transition-opacity" onclick="event.stopPropagation(); openArtistProfile('${item.artistUid}')">
+                                    <div class="w-7 h-7 rounded-full bg-emerald-100 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200">
                                         ${profileImgHtml}
                                     </div>
-                                    <span class="text-[11px] font-semibold text-slate-400 block truncate">by ${item.artist}</span>
+                                    <span class="text-xs font-bold text-slate-600 block truncate">${item.artist} <i class="fa-solid fa-chevron-right text-[8px] text-slate-400 ml-0.5"></i></span>
                                 </div>
                             </div>
                         </div>
@@ -1224,7 +1343,7 @@
         }
 
         let activeGalleryTab = 'my-drawings';
-        function switchGalleryTab(tab) {
+        window.switchGalleryTab = function(tab) {
             activeGalleryTab = tab;
             document.getElementById('tab-my-drawings').className = tab === 'my-drawings' ? 'flex-1 py-2.5 rounded-xl bg-white text-slate-800 shadow-sm transition-all' : 'flex-1 py-2.5 rounded-xl text-slate-500 transition-all';
             document.getElementById('tab-purchased').className = tab === 'purchased' ? 'flex-1 py-2.5 rounded-xl bg-white text-slate-800 shadow-sm transition-all' : 'flex-1 py-2.5 rounded-xl text-slate-500 transition-all';
@@ -1282,7 +1401,7 @@
                         </div>
                         <div class="px-1 mt-2">
                             <h4 class="font-bold text-xs text-slate-800 truncate">${item.title}</h4>
-                            <p class="text-[10px] text-slate-400 mt-0.5">${isMyDrawing ? '미판매 보관중' : '소장작가: ' + (item.artist || '알 수 없음')}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">${isMyDrawing ? '미판매 보관중' : 'by. ' + (item.artist || '알 수 없음')}</p>
                         </div>
                     </div>
                     ${actionButtons}
@@ -1296,7 +1415,7 @@
             document.getElementById('lockedPoints').innerText = (userData.lockedPoints || 0).toLocaleString();
         }
 
-        function switchTab(tabName) {
+        window.switchTab = function(tabName) {
             const views = ['home', 'draw', 'auction', 'gallery', 'settings'];
             views.forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
             document.getElementById(`view-${tabName}`).classList.remove('hidden');
@@ -1312,11 +1431,16 @@
             if (tabName === 'draw') {
                 document.getElementById('studioNormalBtns').style.display = 'flex';
                 document.getElementById('studioProfileBtns').style.display = 'none';
+                document.getElementById('studioProfileBtns').classList.add('hidden');
             }
 
             if (tabName === 'auction') {
                 renderAuctions(); clearInterval(auctionTimerInterval); auctionTimerInterval = setInterval(renderAuctions, 60000); 
             } else { clearInterval(auctionTimerInterval); }
+
+            if (tabName === 'gallery') {
+                renderGallery();
+            }
         }
 
         // ========================================== //
@@ -1509,6 +1633,13 @@
                 ctx.putImageData(state, 0, 0);
             }
         };
+        
+        window.confirmClearCanvas = function() {
+            if(confirm("진행 중인 작업이 모두 삭제됩니다.\n캔버스를 초기화하시겠습니까?")) {
+                clearCanvas();
+            }
+        }
+        
         window.clearCanvas = function() { 
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); 
             undoStack = [];
@@ -1712,7 +1843,6 @@
                 return null;
             }
 
-            // 도형 회전 핸들은 도형 위쪽 중앙에 위치
             if (hit(tfX + tfW/2, tfY - 30)) return 'rotate';
 
             if (hit(tfX, tfY)) return 'tl';
@@ -1810,7 +1940,7 @@
             ctxTarget.save();
 
             if (tfMode === 'line') {
-                ctxTarget.strokeStyle = currentColor; ctxTarget.lineWidth = currentLineWidth;
+                ctxTarget.strokeStyle = currentColor; ctxTarget.lineWidth = currentLineWidth; ctxTarget.lineCap = 'round';
                 ctxTarget.beginPath();
                 ctxTarget.moveTo(lineStartX, lineStartY);
                 ctxTarget.lineTo(lineEndX, lineEndY);
@@ -1862,7 +1992,6 @@
             
             drawTransformedObject(oCtx);
 
-            // 가이드 점선 및 핸들 UI 그리기
             oCtx.save();
             if (tfMode === 'line') {
                 const hSize = 12;
@@ -1882,11 +2011,9 @@
             oCtx.strokeStyle = '#10b981'; oCtx.lineWidth = 1.5; oCtx.setLineDash([4, 4]);
             oCtx.strokeRect(lx, ly, tfW, tfH); oCtx.setLineDash([]);
             
-            // 회전 핸들
             oCtx.beginPath(); oCtx.moveTo(0, ly); oCtx.lineTo(0, ly - 30); oCtx.stroke();
             oCtx.fillStyle = '#10b981'; oCtx.beginPath(); oCtx.arc(0, ly - 30, 6, 0, 2 * Math.PI); oCtx.fill();
 
-            // 리사이즈 핸들
             oCtx.fillStyle = '#ffffff';
             const hSize = 8;
             const drawHandle = (x, y) => { oCtx.fillRect(x - hSize/2, y - hSize/2, hSize, hSize); oCtx.strokeRect(x - hSize/2, y - hSize/2, hSize, hSize); };
@@ -1919,7 +2046,7 @@
         window.openAuctionModalFromCanvas = function() {
             if(!currentUser) return showToast("연결 대기 중입니다.");
             if (undoStack.length <= 1) return showToast("그림을 먼저 그려주세요!");
-            pendingGalleryAuctionImage = null; // 캔버스에서 출품
+            pendingGalleryAuctionImage = null; 
             window.pendingGalleryDocId = null;
             document.getElementById('auctionTitle').value = '';
             document.getElementById('modalImagePreview').innerHTML = `<img src="${canvas.toDataURL('image/png')}" class="w-full h-full object-cover rounded-2xl">`;
