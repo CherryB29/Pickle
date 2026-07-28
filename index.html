@@ -322,8 +322,8 @@
                 <!-- 캔버스 영역 -->
                 <div class="w-full min-h-0 relative mb-2 flex justify-center items-center flex-shrink-0 max-h-[50vh]">
                     <div class="relative bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-shrink-0 aspect-square w-full h-full max-h-full mx-auto" style="max-height: 45vh;">
-                        <canvas id="paintCanvas" width="2000" height="2000" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
-                        <canvas id="overlayCanvas" width="2000" height="2000" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
+                        <canvas id="paintCanvas" width="432" height="432" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
+                        <canvas id="overlayCanvas" width="432" height="432" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
 
                         <!-- 변환 조절 플로팅 UI -->
                         <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-xl flex flex-col gap-1.5 z-30 hidden border border-slate-200">
@@ -472,6 +472,13 @@
                             <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                         </label>
                     </div>
+                    <div class="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <span class="font-semibold text-slate-700 flex items-center gap-2"><i class="fa-solid fa-pen-fancy text-amber-500 w-5"></i> 애플펜슬로만 그리기</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="applePencilOnlyToggle" class="sr-only peer" onchange="toggleApplePencilOnly()">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
                     <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-rose-50 transition-colors text-rose-500 font-bold" onclick="showLogoutModal()">
                         <span class="flex items-center gap-2"><i class="fa-solid fa-right-from-bracket w-5"></i> 로그아웃</span>
                         <i class="fa-solid fa-chevron-right text-xs text-rose-300"></i>
@@ -490,11 +497,8 @@
                 <i class="fa-solid fa-palette text-lg"></i><span class="text-[10px] font-bold">스튜디오</span>
             </button>
             <button onclick="switchTab('auction')" id="nav-auction" class="nav-btn relative flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
-                <span class="relative inline-flex items-center justify-center">
-                    <i class="fa-solid fa-gavel text-lg"></i>
-                    <span id="nav-auction-new-badge" class="hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-[8px] font-black text-white flex items-center justify-center shadow-sm">NEW</span>
-                </span>
-                <span class="text-[10px] font-bold">경매</span>
+                <span id="nav-auction-badge" class="hidden absolute top-1.5 right-2 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">NEW</span>
+                <i class="fa-solid fa-gavel text-lg"></i><span class="text-[10px] font-bold">경매</span>
             </button>
             <button onclick="switchTab('gallery')" id="nav-gallery" class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
                 <i class="fa-solid fa-images text-lg"></i><span class="text-[10px] font-bold">갤러리</span>
@@ -679,12 +683,19 @@
         let auctionItemsList = [];
         let auctionTimerInterval = null; 
         const SIX_HOURS_MS = 6 * 60 * 60 * 1000; 
+        const SEEN_AUCTIONS_KEY = 'pickle_seen_auctions_v1';
+        const SETTLEMENTS_STORAGE_KEY = 'pickle_processed_settlements_v1';
+        let seenAuctionIds = new Set();
+        let newAuctionIds = new Set();
+        let processedSettlements = new Set();
+        let settlementAlertQueue = [];
 
         // 캔버스 변수
         let currentTool = 'pen';
         let baseColor = '#000000';
         let currentOpacity = 1;
         let currentColor = 'rgba(0, 0, 0, 1)';
+        let applePencilOnly = false;
         let currentLineWidth = 4;
         let isDrawing = false, startX = 0, startY = 0, snapshot = null;
         let pendingGalleryAuctionImage = null; 
@@ -712,58 +723,8 @@
         let lastTfPos = {x: 0, y: 0};
 
         let favColors = ['#000000', '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
-        let activePenPointerId = null;
-
-        function shouldIgnorePointerInput(e) {
-            if (e.pointerType === 'pen') {
-                activePenPointerId = e.pointerId;
-                return false;
-            }
-
-            if (activePenPointerId !== null && e.pointerType === 'touch') {
-                e.preventDefault();
-                return true;
-            }
-
-            return false;
-        }
-
-        function handleCanvasPointerDown(e) {
-            if (shouldIgnorePointerInput(e)) return;
-            if (e.pointerType === 'pen') {
-                activePenPointerId = e.pointerId;
-            }
-            e.currentTarget.setPointerCapture?.(e.pointerId);
-            startDraw(e);
-        }
-
-        function handleCanvasPointerMove(e) {
-            if (shouldIgnorePointerInput(e)) return;
-            drawing(e);
-        }
-
-        function handleCanvasPointerUp(e) {
-            if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) {
-                activePenPointerId = null;
-            }
-            stopDraw(e);
-        }
-
-        function handleCanvasPointerCancel(e) {
-            if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) {
-                activePenPointerId = null;
-            }
-            stopDraw(e);
-        }
 
         // UI 헬퍼
-        const homeHeroPhrases = [
-            { title: '직접 그리고,<br>실시간 경매까지!', subtitle: '나만의 그림을 픽클에서 가치를 인정받으세요.' },
-            { title: '한 번의 터치로,<br>작품의 새 이름을 짓다', subtitle: '당신의 그림이 경매장에서 빛을 발할 수 있어요.' },
-            { title: '캔버스 위에 담는<br>오늘의 감각', subtitle: '작은 스케치도 픽클의 특별한 가치가 됩니다.' },
-            { title: '그림은 그리면서,<br>가치는 경매로', subtitle: '당신의 창작이 실시간으로 인정받는 순간.' }
-        ];
-
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toastMsg').innerText = msg;
@@ -771,12 +732,84 @@
             setTimeout(() => toast.classList.remove('show'), 2500);
         }
 
-        function renderHomeHero() {
-            const hero = homeHeroPhrases[Math.floor(Math.random() * homeHeroPhrases.length)];
+        function loadProcessedSettlements() {
+            try {
+                const saved = localStorage.getItem(SETTLEMENTS_STORAGE_KEY);
+                return new Set(JSON.parse(saved || '[]'));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function saveProcessedSettlements() {
+            localStorage.setItem(SETTLEMENTS_STORAGE_KEY, JSON.stringify([...processedSettlements]));
+        }
+
+        function markSettlementProcessed(auctionId) {
+            processedSettlements.add(auctionId);
+            saveProcessedSettlements();
+        }
+
+        function queueSettlementAlert(title, message, icon = '🎉', imgUrl = null) {
+            settlementAlertQueue.push({ title, message, icon, imgUrl });
+            if (settlementAlertQueue.length === 1) {
+                const showNext = () => {
+                    if (settlementAlertQueue.length === 0) return;
+                    const next = settlementAlertQueue.shift();
+                    showAlertModal(next.title, next.message, next.icon, next.imgUrl);
+                    setTimeout(showNext, 700);
+                };
+                showNext();
+            }
+        }
+
+        function loadSeenAuctionIds() {
+            try {
+                const saved = localStorage.getItem(SEEN_AUCTIONS_KEY);
+                return new Set(JSON.parse(saved || '[]'));
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function saveSeenAuctionIds() {
+            localStorage.setItem(SEEN_AUCTIONS_KEY, JSON.stringify([...seenAuctionIds]));
+        }
+
+        function markAuctionItemsSeen(ids = []) {
+            ids.forEach(id => seenAuctionIds.add(id));
+            saveSeenAuctionIds();
+        }
+
+        function updateAuctionNavBadge() {
+            const badge = document.getElementById('nav-auction-badge');
+            if (badge) {
+                badge.classList.toggle('hidden', newAuctionIds.size === 0);
+            }
+        }
+
+        function renderHomeHeroCopy() {
             const titleEl = document.getElementById('homeHeroTitle');
             const subtitleEl = document.getElementById('homeHeroSubtitle');
-            if (titleEl) titleEl.innerHTML = hero.title;
-            if (subtitleEl) subtitleEl.innerText = hero.subtitle;
+            if (!titleEl || !subtitleEl) return;
+
+            const titleOptions = [
+                '직접 그리고,<br>실시간 경매까지!',
+                '손끝으로 그린 그림,<br>바로 경매로!',
+                '당신의 그림이<br>오늘의 주인공이 됩니다!',
+                '그림을 그리면<br>가치가 생깁니다!'
+            ];
+            const subtitleOptions = [
+                '픽클에서 나만의 그림의 가치를 인정받으세요.',
+                '작품을 올리고 실시간 입찰의 흐름을 확인해 보세요.',
+                '작은 한 장도 특별한 소장품이 될 수 있어요.',
+                '픽클에서 당신의 감각을 세상에 선보이세요.'
+            ];
+
+            const title = titleOptions[Math.floor(Math.random() * titleOptions.length)];
+            const subtitle = subtitleOptions[Math.floor(Math.random() * subtitleOptions.length)];
+            titleEl.innerHTML = title;
+            subtitleEl.innerText = subtitle;
         }
 
         function showAlertModal(title, message, icon = '🎉', imgUrl = null) {
@@ -829,9 +862,17 @@
             }
         };
 
+        window.toggleApplePencilOnly = function() {
+            applePencilOnly = document.getElementById('applePencilOnlyToggle').checked;
+            showToast(applePencilOnly ? '애플펜슬 전용 모드가 켜졌습니다.' : '애플펜슬 전용 모드가 해제되었습니다.');
+        };
+
         // 앱 로드
         window.addEventListener('load', () => {
-            renderHomeHero();
+            seenAuctionIds = loadSeenAuctionIds();
+            processedSettlements = loadProcessedSettlements();
+            renderHomeHeroCopy();
+            initCanvas();
             setupImageTransformEvents();
             renderFavColors();
             initColorPicker(); 
@@ -975,30 +1016,55 @@
             const { db, appId, collection, onSnapshot } = window.FB;
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'auctions'), (snapshot) => {
                 auctionItemsList = []; const now = Date.now();
+                const incomingNewIds = [];
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data(); const id = docSnap.id;
-                    if (data.status !== 'closed') {
-                        if (now - data.lastBidTime >= SIX_HOURS_MS) {
-                            if (data.highestBidderUid === currentUser.uid) processAuctionWin(id, data);
-                            else if (!data.highestBidderUid && data.artistUid === currentUser.uid) processAuctionFail(id, data);
-                        } else {
-                            auctionItemsList.push({ id, ...data });
+                    const isExpired = (now - data.lastBidTime) >= SIX_HOURS_MS;
+                    if (data.status !== 'closed' && !isExpired) {
+                        const isNew = !seenAuctionIds.has(id);
+                        if (isNew && !newAuctionIds.has(id)) {
+                            newAuctionIds.add(id);
+                            incomingNewIds.push(id);
+                        }
+                        auctionItemsList.push({ id, ...data, isNew });
+                    } else if (data.status === 'closed' || isExpired) {
+                        if (data.highestBidderUid === currentUser?.uid) {
+                            processAuctionWin(id, data);
+                        } else if (!data.highestBidderUid && data.artistUid === currentUser?.uid) {
+                            processAuctionFail(id, data);
                         }
                     }
                 });
                 auctionItemsList.sort((a, b) => b.createdAt - a.createdAt);
+                if (incomingNewIds.length > 0) updateAuctionNavBadge();
                 if (!document.getElementById('view-auction').classList.contains('hidden')) renderAuctions();
             }, err => console.error(err));
         }
 
         async function processAuctionWin(auctionId, data) {
             const { db, appId, doc, updateDoc, addDoc, getDoc, collection } = window.FB;
+            if (!currentUser?.uid) return;
+            if (processedSettlements.has(auctionId)) return;
+            markSettlementProcessed(auctionId);
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed' });
-                const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                await updateDoc(myRef, { lockedPoints: Math.max(0, (userData.lockedPoints || 0) - data.currentBid) });
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed', closedAt: Date.now() });
 
-                // 원작자 수익금 및 판매 통계(highestBid 등) 업데이트
+                const isWinner = currentUser.uid === data.highestBidderUid;
+                const isArtist = currentUser.uid === data.artistUid;
+
+                if (isWinner) {
+                    const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                    await updateDoc(myRef, { lockedPoints: Math.max(0, (userData.lockedPoints || 0) - data.currentBid) });
+                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'purchased'), {
+                        title: data.title, image: data.image, artist: data.artist, price: data.currentBid, createdAt: Date.now()
+                    });
+                    queueSettlementAlert('낙찰 성공!', `축하합니다!\n[${data.title}] 작품을 최종 낙찰받았습니다.\n내 갤러리의 '소장한 작품'에서 확인할 수 있습니다.`, '🎉', data.image);
+                }
+
+                if (isArtist) {
+                    queueSettlementAlert('작품 판매 완료', `축하합니다!\n[${data.title}] 작품이 ${data.highestBidder || '입찰자'}에게 ${data.currentBid}P에 판매되었습니다.`, '🏆', data.image);
+                }
+
                 const artistRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'profile', 'data');
                 const artistSnap = await getDoc(artistRef);
                 if(artistSnap.exists()) {
@@ -1006,7 +1072,7 @@
                     const newPoints = (artistData.points || 0) + data.currentBid;
                     const newSoldCount = (artistData.soldCount || 0) + 1;
                     const newHighestBid = Math.max((artistData.highestBid || 0), data.currentBid);
-                    
+
                     let updatePayload = { points: newPoints, soldCount: newSoldCount, highestBid: newHighestBid };
                     if (data.currentBid >= (artistData.highestBid || 0)) {
                         updatePayload.highestBidImage = data.image;
@@ -1014,22 +1080,22 @@
                     }
                     await updateDoc(artistRef, updatePayload);
                 }
-
-                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'purchased'), {
-                    title: data.title, image: data.image, artist: data.artist, price: data.currentBid, createdAt: Date.now()
-                });
-                showAlertModal('낙찰 성공!', `축하합니다!\n[${data.title}] 작품을 최종 낙찰받았습니다.\n내 갤러리의 '소장한 작품'에서 확인할 수 있습니다.`, '🎉', data.image);
             } catch(e){ console.error("Win process error", e); }
         }
 
         async function processAuctionFail(auctionId, data) {
             const { db, appId, doc, updateDoc, addDoc, collection } = window.FB;
+            if (!currentUser?.uid) return;
+            if (processedSettlements.has(auctionId)) return;
+            markSettlementProcessed(auctionId);
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed' });
-                await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings'), {
-                    title: data.title, image: data.image, createdAt: Date.now()
-                });
-                showAlertModal('경매 유찰 안내', `[${data.title}] 작품이 입찰자 없이 경매가 종료되어 보관함으로 반환되었습니다.`, '🕰️', data.image);
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId), { status: 'closed', closedAt: Date.now() });
+                if (currentUser.uid === data.artistUid) {
+                    await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings'), {
+                        title: data.title, image: data.image, createdAt: Date.now()
+                    });
+                    queueSettlementAlert('경매 유찰 안내', `[${data.title}] 작품이 입찰자 없이 경매가 종료되어 보관함으로 반환되었습니다.`, '🕰️', data.image);
+                }
             } catch(e){}
         }
 
@@ -1336,48 +1402,36 @@
             document.getElementById('artistProfileModal').classList.add('hidden');
         };
 
-        function updateAuctionNavBadge(hasNew = false) {
-            const badge = document.getElementById('nav-auction-new-badge');
-            if (badge) {
-                badge.classList.toggle('hidden', !hasNew);
-            }
-        }
-
         function renderAuctions() {
             const container = document.getElementById('auctionList');
             container.innerHTML = '';
             if (auctionItemsList.length === 0) {
                 container.innerHTML = `<div class="text-center py-10 text-xs text-slate-400 font-bold bg-white rounded-3xl border border-dashed border-slate-200">현재 진행 중인 경매가 없습니다.<br>첫 작품을 출품해 보세요!</div>`;
+                updateAuctionNavBadge();
                 return;
             }
             const now = Date.now();
-            const seenAuctions = JSON.parse(localStorage.getItem('pickleSeenAuctions') || '[]');
-            const hasUnseen = auctionItemsList.some(item => !seenAuctions.includes(item.id));
-            updateAuctionNavBadge(hasUnseen);
             auctionItemsList.forEach(item => {
                 const remainingMs = (item.lastBidTime + SIX_HOURS_MS) - now;
                 let timeBadge = '';
                 if (remainingMs > 0) {
                     const hrs = Math.floor(remainingMs / (1000 * 60 * 60));
                     const mins = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-                    timeBadge = `<span class="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 z-10 pointer-events-none">
-                                    <i class="fa-regular fa-clock text-amber-400"></i> ${hrs}시간 ${mins}분 남음
+                    const isUrgent = hrs <= 1;
+                    const timeColorClass = isUrgent ? 'bg-rose-500/95 text-white' : 'bg-black/60 text-white';
+                    const iconClass = isUrgent ? 'text-amber-300' : 'text-amber-400';
+                    timeBadge = `<span class="absolute top-3 right-3 ${timeColorClass} backdrop-blur-md text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 z-10 pointer-events-none">
+                                    <i class="fa-regular fa-clock ${iconClass}"></i> ${hrs}시간 ${mins}분 남음
                                 </span>`;
                 }
 
                 const isLiked = item.likes && currentUser ? item.likes.includes(currentUser.uid) : false;
                 const likeCount = item.likes ? item.likes.length : 0;
-                const isNew = !seenAuctions.includes(item.id);
-                if (isNew) {
-                    seenAuctions.push(item.id);
-                    localStorage.setItem('pickleSeenAuctions', JSON.stringify(seenAuctions));
-                }
-                const isHot = likeCount >= 3 || (item.bidsCount || 0) >= 3;
-                const badgeHtml = `
-                    <div class="absolute top-3 left-3 flex gap-1.5 z-10 pointer-events-none">
-                        ${isNew ? '<span class="bg-rose-500/90 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">NEW</span>' : ''}
-                        ${isHot ? '<span class="bg-amber-500/90 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">HOT</span>' : ''}
-                    </div>
+                const isHot = (item.likes ? item.likes.length : 0) >= 3 || (item.bidsCount || 0) >= 3;
+                const isNew = item.isNew && newAuctionIds.has(item.id);
+                const badgesHtml = `
+                    ${isNew ? `<span class="absolute top-3 left-3 bg-rose-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full z-10 shadow-md">NEW</span>` : ''}
+                    ${isHot ? `<span class="absolute top-3 left-[74px] bg-amber-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full z-10 shadow-md">HOT</span>` : ''}
                 `;
                 
                 const profileImgHtml = item.artistProfileImage 
@@ -1393,7 +1447,7 @@
                             <i class="fa-solid fa-magnifying-glass-plus text-base"></i> 터치하여 크게 보기
                         </div>
                         ${timeBadge}
-                        ${badgeHtml}
+                        ${badgesHtml}
                         <button onclick="event.stopPropagation(); toggleLike('${item.id}')" class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-full shadow-md flex items-center gap-1.5 active:scale-90 transition-transform z-10">
                             <i class="${isLiked ? 'fa-solid text-rose-500' : 'fa-regular text-slate-400'} fa-heart text-sm"></i>
                             <span class="text-xs font-extrabold ${isLiked ? 'text-rose-500' : 'text-slate-600'}">${likeCount}</span>
@@ -1425,6 +1479,9 @@
                 `;
                 container.appendChild(card);
             });
+            markAuctionItemsSeen(auctionItemsList.map(item => item.id));
+            newAuctionIds.clear();
+            updateAuctionNavBadge();
         }
 
         let activeGalleryTab = 'my-drawings';
@@ -1522,6 +1579,9 @@
             if (tabName === 'auction') {
                 renderAuctions(); clearInterval(auctionTimerInterval); auctionTimerInterval = setInterval(renderAuctions, 60000); 
             } else { clearInterval(auctionTimerInterval); }
+            if (tabName !== 'auction') {
+                updateAuctionNavBadge();
+            }
 
             if (tabName === 'gallery') {
                 renderGallery();
@@ -1681,10 +1741,10 @@
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             saveState(); 
             
-            canvas.addEventListener('pointerdown', handleCanvasPointerDown, {passive: false});
-            canvas.addEventListener('pointermove', handleCanvasPointerMove, {passive: false});
-            window.addEventListener('pointerup', handleCanvasPointerUp);
-            window.addEventListener('pointercancel', handleCanvasPointerCancel);
+            canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', drawing); window.addEventListener('mouseup', stopDraw);
+            canvas.addEventListener('touchstart', (e)=>{e.preventDefault(); startDraw(e)}, {passive: false});
+            canvas.addEventListener('touchmove', (e)=>{e.preventDefault(); drawing(e)}, {passive: false});
+            window.addEventListener('touchend', stopDraw);
         }
 
         window.toggleShapeMenu = function(e) {
@@ -1740,6 +1800,12 @@
                 x: (clientX - rect.left) * (canvas.width / rect.width), 
                 y: (clientY - rect.top) * (canvas.height / rect.height) 
             };
+        }
+
+        function shouldBlockDrawing(e) {
+            if (!applePencilOnly) return false;
+            const pointerType = e.pointerType || (e.touches ? 'touch' : 'mouse');
+            return pointerType !== 'pen';
         }
 
         function floodFill(x, y, fillColorStr) {
@@ -1805,6 +1871,10 @@
 
         function startDraw(e) {
             if (tfMode) return; 
+            if (shouldBlockDrawing(e)) {
+                showToast('애플펜슬 전용 모드에서는 펜으로만 그릴 수 있습니다.');
+                return;
+            }
             const pos = getCoordinates(e); 
 
             if (currentTool === 'bucket') {
@@ -1820,6 +1890,7 @@
         }
         function drawing(e) {
             if(!isDrawing || tfMode || currentTool === 'bucket') return;
+            if (shouldBlockDrawing(e)) return;
             const pos = getCoordinates(e);
             if(currentTool === 'pen' || currentTool === 'eraser') { ctx.lineTo(pos.x, pos.y); ctx.stroke(); }
         }
@@ -1917,30 +1988,29 @@
         };
 
         function getHandleHit(x, y) {
-            const hSize = 24; 
-            const hit = (hx, hy, size = hSize) => Math.abs(x - hx) <= size && Math.abs(y - hy) <= size;
+            const hSize = 20; 
+            const hit = (hx, hy) => Math.abs(x - hx) <= hSize && Math.abs(y - hy) <= hSize;
             
             if (tfMode === 'line') {
-                if (hit(lineStartX, lineStartY, 16)) return 'line_start';
-                if (hit(lineEndX, lineEndY, 16)) return 'line_end';
+                if (hit(lineStartX, lineStartY)) return 'line_start';
+                if (hit(lineEndX, lineEndY)) return 'line_end';
                 const d = Math.abs((lineEndX - lineStartX)*(lineStartY - y) - (lineStartX - x)*(lineEndY - lineStartY)) / Math.sqrt(Math.pow(lineEndX - lineStartX, 2) + Math.pow(lineEndY - lineStartY, 2));
-                if (d < 16) return 'move';
+                if (d < 10) return 'move';
                 return null;
             }
 
-            if (hit(tfX + tfW/2, tfY - 30, 18)) return 'rotate';
+            if (hit(tfX + tfW/2, tfY - 30)) return 'rotate';
 
-            if (hit(tfX, tfY, 18)) return 'tl';
-            if (hit(tfX + tfW/2, tfY, 18)) return 'tc';
-            if (hit(tfX + tfW, tfY, 18)) return 'tr';
-            if (hit(tfX, tfY + tfH/2, 18)) return 'cl';
-            if (hit(tfX + tfW, tfY + tfH/2, 18)) return 'cr';
-            if (hit(tfX, tfY + tfH, 18)) return 'bl';
-            if (hit(tfX + tfW/2, tfY + tfH, 18)) return 'bc';
-            if (hit(tfX + tfW, tfY + tfH, 18)) return 'br';
+            if (hit(tfX, tfY)) return 'tl';
+            if (hit(tfX + tfW/2, tfY)) return 'tc';
+            if (hit(tfX + tfW, tfY)) return 'tr';
+            if (hit(tfX, tfY + tfH/2)) return 'cl';
+            if (hit(tfX + tfW, tfY + tfH/2)) return 'cr';
+            if (hit(tfX, tfY + tfH)) return 'bl';
+            if (hit(tfX + tfW/2, tfY + tfH)) return 'bc';
+            if (hit(tfX + tfW, tfY + tfH)) return 'br';
             
-            const padding = 18;
-            if (x >= tfX + padding && x <= tfX + tfW - padding && y >= tfY + padding && y <= tfY + tfH - padding) return 'move';
+            if (x >= tfX && x <= tfX + tfW && y >= tfY && y <= tfY + tfH) return 'move';
             return null;
         }
 
@@ -2018,24 +2088,8 @@
             }
             function endTfDrag() { isTfDragging = false; tfAction = null; }
 
-            overlayCanvas.addEventListener('pointerdown', (e) => {
-                if (shouldIgnorePointerInput(e)) return;
-                if (e.pointerType === 'pen') activePenPointerId = e.pointerId;
-                e.currentTarget.setPointerCapture?.(e.pointerId);
-                startTfDrag(e);
-            }, {passive: false});
-            overlayCanvas.addEventListener('pointermove', (e) => {
-                if (shouldIgnorePointerInput(e)) return;
-                doTfDrag(e);
-            }, {passive: false});
-            window.addEventListener('pointerup', (e) => {
-                if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) activePenPointerId = null;
-                endTfDrag(e);
-            });
-            window.addEventListener('pointercancel', (e) => {
-                if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) activePenPointerId = null;
-                endTfDrag(e);
-            });
+            overlayCanvas.addEventListener('mousedown', startTfDrag); overlayCanvas.addEventListener('mousemove', doTfDrag); window.addEventListener('mouseup', endTfDrag);
+            overlayCanvas.addEventListener('touchstart', startTfDrag, {passive: false}); overlayCanvas.addEventListener('touchmove', doTfDrag, {passive: false}); window.addEventListener('touchend', endTfDrag);
         }
 
         function drawTransformedObject(ctxTarget) {
@@ -2117,7 +2171,7 @@
             oCtx.fillStyle = '#10b981'; oCtx.beginPath(); oCtx.arc(0, ly - 30, 6, 0, 2 * Math.PI); oCtx.fill();
 
             oCtx.fillStyle = '#ffffff';
-            const hSize = 6;
+            const hSize = 8;
             const drawHandle = (x, y) => { oCtx.fillRect(x - hSize/2, y - hSize/2, hSize, hSize); oCtx.strokeRect(x - hSize/2, y - hSize/2, hSize, hSize); };
             
             drawHandle(lx, ly); drawHandle(0, ly); drawHandle(lx + tfW, ly);
