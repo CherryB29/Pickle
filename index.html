@@ -203,6 +203,8 @@
         .cucumber-preview-three { top: 37px; left: 70%; width: 38px; height: 76px; transform: rotate(17deg); }
         .cucumber-game-stage { position: relative; height: 310px; overflow: hidden; touch-action: none; background: linear-gradient(180deg, #9ee5f2 0%, #d9f6c6 72%, #9ed07b 72%, #78ad62 100%); }
         .cucumber-game-stage::before { content: ''; position: absolute; inset: 0 0 28% 0; opacity: 0.5; background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 20px 20px; }
+        .cucumber-game-stage.fever { background: linear-gradient(180deg, #ffe46e 0%, #fff3b0 72%, #d8aa38 72%, #b47a19 100%); }
+        .cucumber-game-stage.fever::before { opacity: .7; background-image: radial-gradient(#fff8cf 1px, transparent 1px); }
         .cucumber-piece { position: absolute; width: 22px; height: 42px; border-radius: 999px; background: repeating-linear-gradient(92deg, #155f3f 0 4px, #2b9b53 4px 8px); box-shadow: inset 3px 0 0 rgba(255,255,255,.22), 2px 3px 3px rgba(24, 73, 43, .18); }
         .cucumber-piece.golden { background: repeating-linear-gradient(92deg, #c58a08 0 4px, #ffe56a 4px 8px); box-shadow: inset 3px 0 0 rgba(255,255,255,.45), 0 0 10px rgba(255, 198, 43, .95); }
         .cucumber-basket { position: absolute; bottom: 18px; width: 82px; height: 38px; border: 5px solid #8a4b1f; border-top: 0; border-radius: 0 0 22px 22px; background: repeating-linear-gradient(0deg, #e5a84a 0 6px, #c77c2c 6px 11px); box-shadow: 0 5px 0 rgba(69, 36, 15, .2); }
@@ -389,14 +391,13 @@
                         <canvas id="paintCanvas" width="432" height="432" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
                         <canvas id="overlayCanvas" width="432" height="432" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
                         <div id="brushCursor"></div>
-
-                        <!-- 변환 조절 플로팅 UI -->
-                        <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-xl flex flex-col gap-1.5 z-30 hidden border border-slate-200">
-                            <input type="text" id="tfTextInput" placeholder="텍스트 입력 (직접 모서리 드래그)" class="hidden w-full px-2 py-1.5 text-xs font-bold border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 bg-slate-50">
-                            <div class="flex gap-2 mt-1">
-                                <button onclick="cancelImageTransform()" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-[11px] font-bold active:scale-95">취소</button>
-                                <button onclick="confirmImageTransform()" class="flex-[2] py-2 bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow-md active:scale-95"><i class="fa-solid fa-stamp"></i> 도장 찍기</button>
-                            </div>
+                    </div>
+                    <!-- 변환 조절 플로팅 UI -->
+                    <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-xl flex flex-col gap-1.5 z-30 hidden border border-slate-200">
+                        <input type="text" id="tfTextInput" placeholder="텍스트 입력 (직접 모서리 드래그)" class="hidden w-full px-2 py-1.5 text-xs font-bold border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 bg-slate-50">
+                        <div class="flex gap-2 mt-1">
+                            <button onclick="cancelImageTransform()" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg text-[11px] font-bold active:scale-95">취소</button>
+                            <button onclick="confirmImageTransform()" class="flex-[2] py-2 bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow-md active:scale-95"><i class="fa-solid fa-stamp"></i> 도장 찍기</button>
                         </div>
                     </div>
                     </div>
@@ -811,7 +812,7 @@
             </div>
 
             <p id="alertMessage" class="text-xs text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">메시지 내용</p>
-            <button onclick="document.getElementById('alertModal').classList.add('hidden')" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md mt-2 transition-colors">확인</button>
+            <button onclick="confirmSettlementAlert()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md mt-2 transition-colors">확인</button>
         </div>
     </div>
 
@@ -866,6 +867,7 @@
         let newAuctionIds = new Set();
         let processedSettlements = new Set();
         let settlementAlertQueue = [];
+        let isSettlementAlertShowing = false;
 
         // 캔버스 변수
         let currentTool = 'pen';
@@ -879,7 +881,8 @@
         let canvasPan = { x: 0, y: 0 };
         let pinchStart = null;
         const canvasTouchPoints = new Map();
-        let pendingTouchDraw = null;
+        let touchGestureSnapshot = null;
+        let touchGestureCancelled = false;
         let pendingGalleryAuctionImage = null; 
         let pencilSharpeningStep = 0;
         let pencilSessionPoints = 0;
@@ -887,7 +890,7 @@
         let pencilThree = null;
         let pencilSelectThree = null;
         let pointDingTimer = null;
-        let cucumberGame = { active: false, basketX: 0, items: [], lastSpawnAt: 0, lastFrameAt: 0, frame: null, caught: 0, caughtPieces: 0, pendingPoints: 0, pendingPieces: 0, flushTimer: null };
+        let cucumberGame = { active: false, basketX: 0, items: [], lastSpawnAt: 0, lastFrameAt: 0, frame: null, caught: 0, caughtPieces: 0, feverProgress: 0, feverUntil: 0, pendingPoints: 0, pendingPieces: 0, flushTimer: null };
         let paintGame = { active: false, bucket: null, frame: null, lastFrameAt: 0, lastSpawnAt: 0, score: 0, pendingPoints: 0, pendingCount: 0, flushTimer: null };
         
         const canvas = document.getElementById('paintCanvas');
@@ -942,15 +945,20 @@
 
         function queueSettlementAlert(title, message, icon = '🎉', imgUrl = null) {
             settlementAlertQueue.push({ title, message, icon, imgUrl });
-            if (settlementAlertQueue.length === 1) {
-                const showNext = () => {
-                    if (settlementAlertQueue.length === 0) return;
-                    const next = settlementAlertQueue.shift();
-                    showAlertModal(next.title, next.message, next.icon, next.imgUrl);
-                    setTimeout(showNext, 700);
-                };
-                showNext();
-            }
+            showNextSettlementAlert();
+        }
+
+        function showNextSettlementAlert() {
+            if (isSettlementAlertShowing || settlementAlertQueue.length === 0) return;
+            const next = settlementAlertQueue.shift();
+            isSettlementAlertShowing = true;
+            showAlertModal(next.title, next.message, next.icon, next.imgUrl);
+        }
+
+        window.confirmSettlementAlert = function() {
+            document.getElementById('alertModal').classList.add('hidden');
+            isSettlementAlertShowing = false;
+            setTimeout(showNextSettlementAlert, 180);
         }
 
         function loadSeenAuctionIds() {
@@ -1246,6 +1254,7 @@
                 const winnerRef = doc(db, 'artifacts', appId, 'users', data.highestBidderUid, 'profile', 'data');
                 const artistRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'profile', 'data');
                 const purchaseRef = doc(db, 'artifacts', appId, 'users', data.highestBidderUid, 'purchased', auctionId);
+                const shouldStorePurchase = !purchasedArtList.some((item) => item.title === data.title && item.image === data.image);
 
                 await runTransaction(db, async (transaction) => {
                     const auctionSnap = await transaction.get(auctionRef);
@@ -1267,7 +1276,7 @@
                     }
 
                     transaction.update(auctionRef, { status: 'closed', closedAt: Date.now(), settlementId: auctionId });
-                    transaction.set(purchaseRef, { auctionId, title: data.title, image: data.image, artist: data.artist, price: data.currentBid, createdAt: Date.now() });
+                    if (shouldStorePurchase) transaction.set(purchaseRef, { auctionId, title: data.title, image: data.image, artist: data.artist, price: data.currentBid, createdAt: Date.now(), purchasedAt: Date.now() });
                     if (data.highestBidderUid === data.artistUid) {
                         transaction.update(winnerRef, { ...artistUpdate, lockedPoints: Math.max(0, (winnerData.lockedPoints || 0) - data.currentBid) });
                     } else {
@@ -1293,11 +1302,12 @@
             try {
                 const auctionRef = doc(db, 'artifacts', appId, 'public', 'data', 'auctions', auctionId);
                 const drawingRef = doc(db, 'artifacts', appId, 'users', data.artistUid, 'drawings', auctionId);
+                const shouldReturnDrawing = !myDrawingsList.some((item) => item.title === data.title && item.image === data.image);
                 await runTransaction(db, async (transaction) => {
                     const auctionSnap = await transaction.get(auctionRef);
                     if (!auctionSnap.exists() || auctionSnap.data().status === 'closed') return;
                     transaction.update(auctionRef, { status: 'closed', closedAt: Date.now(), settlementId: auctionId });
-                    transaction.set(drawingRef, { auctionId, title: data.title, image: data.image, createdAt: Date.now() });
+                    if (shouldReturnDrawing) transaction.set(drawingRef, { auctionId, title: data.title, image: data.image, createdAt: Date.now() });
                 });
                 if (currentUser.uid === data.artistUid) {
                     queueSettlementAlert('경매 유찰 안내', `[${data.title}] 작품이 입찰자 없이 경매가 종료되어 보관함으로 반환되었습니다.`, '🕰️', data.image);
@@ -1312,6 +1322,7 @@
                 myDrawingsList = [];
                 snapshot.forEach(docSnap => myDrawingsList.push({ id: docSnap.id, ...docSnap.data() }));
                 myDrawingsList.sort((a, b) => b.createdAt - a.createdAt);
+                removeDuplicateArtworks('drawings', myDrawingsList);
                 if (!document.getElementById('view-gallery').classList.contains('hidden') && activeGalleryTab === 'my-drawings') {
                     renderGallery();
                 }
@@ -1325,10 +1336,25 @@
                 purchasedArtList = [];
                 snapshot.forEach(docSnap => purchasedArtList.push({ id: docSnap.id, ...docSnap.data() }));
                 purchasedArtList.sort((a, b) => b.createdAt - a.createdAt);
+                removeDuplicateArtworks('purchased', purchasedArtList);
                 if (!document.getElementById('view-gallery').classList.contains('hidden') && activeGalleryTab === 'purchased') {
                     renderGallery();
                 }
             }, err => console.error(err));
+        }
+
+        async function removeDuplicateArtworks(collectionName, artworks) {
+            if (!currentUser) return;
+            const seen = new Set();
+            const duplicateIds = [...artworks].reverse().filter((item) => {
+                const key = `${item.title}\u0000${item.image}`;
+                if (seen.has(key)) return true;
+                seen.add(key);
+                return false;
+            }).map((item) => item.id);
+            if (duplicateIds.length === 0) return;
+            const { db, appId, doc, deleteDoc } = window.FB;
+            await Promise.all(duplicateIds.map((id) => deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, collectionName, id))));
         }
 
         window.toggleLike = async function(id) {
@@ -1354,11 +1380,14 @@
             if (!currentUser) return showToast("연결 대기 중입니다.");
             if (undoStack.length <= 1) return showToast("그림을 먼저 그려주세요!");
 
-            const { db, appId, collection, addDoc, doc, updateDoc } = window.FB;
+            const { db, appId, collection, addDoc, doc, updateDoc, getDocs } = window.FB;
             const dataUrl = canvas.toDataURL('image/png');
+            const title = `나의 픽클 작품 #${myDrawingsList.length + 1}`;
             try {
+                const drawings = await getDocs(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings'));
+                if (drawings.docs.some((drawing) => drawing.data().title === title && drawing.data().image === dataUrl)) return showToast('동일한 제목과 그림의 작품은 보관함에 저장할 수 없습니다.');
                 await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings'), {
-                    title: `나의 픽클 작품 #${myDrawingsList.length + 1}`, image: dataUrl, createdAt: Date.now()
+                    title, image: dataUrl, createdAt: Date.now()
                 });
                 await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { points: userData.points + 100 });
                 showToast('내 보관함에 작품이 저장되었습니다! 창작 보상 +100P');
@@ -1835,6 +1864,8 @@
 
             list.forEach(item => {
                 const isMyDrawing = activeGalleryTab === 'my-drawings';
+                const purchasedAt = item.purchasedAt || item.createdAt;
+                const purchasedAtText = purchasedAt ? new Date(purchasedAt).toLocaleString('ko-KR') : '낙찰 일시 확인 중';
                 const card = document.createElement('div');
                 card.className = 'bg-white border border-slate-100 rounded-2xl p-2.5 shadow-sm space-y-2 flex flex-col justify-between';
                 
@@ -1876,7 +1907,7 @@
                         </div>
                         <div class="px-1 mt-2">
                             <h4 class="font-bold text-xs text-slate-800 truncate">${item.title}</h4>
-                            <p class="text-[10px] text-slate-400 mt-0.5">${isMyDrawing ? '미판매 보관중' : 'by. ' + (item.artist || '알 수 없음')}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">${isMyDrawing ? '미판매 보관중' : `낙찰 ${purchasedAtText}`}</p>
                         </div>
                     </div>
                     ${actionButtons}
@@ -2082,10 +2113,11 @@
 
         function spawnCucumberPiece(stage) {
             const piece = document.createElement('div');
-            const isGolden = Math.random() < 0.05;
+            const feverGolden = performance.now() < cucumberGame.feverUntil;
+            const isGolden = feverGolden || Math.random() < 0.05;
             piece.className = `cucumber-piece${isGolden ? ' golden' : ''}`;
             const x = 8 + Math.random() * Math.max(1, stage.clientWidth - 30);
-            const item = { element: piece, x, y: -45, speed: 0.25 + Math.random() * 0.2, angle: (Math.random() - 0.5) * 30, spinSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.09 + Math.random() * 0.1), isGolden, points: isGolden ? 10 : 1 };
+            const item = { element: piece, x, y: -45, speed: 0.25 + Math.random() * 0.2, angle: (Math.random() - 0.5) * 30, spinSpeed: (Math.random() < 0.5 ? -1 : 1) * (0.09 + Math.random() * 0.1), isGolden, feverGolden, points: isGolden ? 10 : 1 };
             piece.style.left = `${x}px`;
             piece.style.top = `${item.y}px`;
             piece.style.transform = `rotate(${item.angle}deg)`;
@@ -2093,7 +2125,7 @@
             cucumberGame.items.push(item);
         }
 
-        function catchCucumber(points, isGolden = false) {
+        function catchCucumber(points, isGolden = false, feverGolden = false) {
             cucumberGame.caught += points;
             cucumberGame.caughtPieces += 1;
             cucumberGame.pendingPoints += points;
@@ -2109,8 +2141,31 @@
                 const stage = document.getElementById('cucumberGameStage');
                 launchGoldConfetti(stage, cucumberGame.basketX, stage?.clientHeight - 112);
             }
+            if (!feverGolden) {
+                cucumberGame.feverProgress += points;
+                if (cucumberGame.feverProgress >= 100) {
+                    cucumberGame.feverProgress -= 100;
+                    startCucumberFever();
+                }
+            }
             clearTimeout(cucumberGame.flushTimer);
             cucumberGame.flushTimer = setTimeout(flushCucumberPoints, 550);
+        }
+
+        function startCucumberFever() {
+            const stage = document.getElementById('cucumberGameStage');
+            if (!stage) return;
+            cucumberGame.feverUntil = performance.now() + 5000;
+            stage.classList.add('fever');
+            cucumberGame.items.forEach((item) => {
+                item.isGolden = true;
+                item.feverGolden = true;
+                item.points = 10;
+                item.element.classList.add('golden');
+            });
+            setTimeout(() => {
+                if (performance.now() >= cucumberGame.feverUntil) stage.classList.remove('fever');
+            }, 5050);
         }
 
         async function flushCucumberPoints() {
@@ -2157,7 +2212,7 @@
                 const isWithinBasket = Math.abs((item.x + 11) - cucumberGame.basketX) <= 48;
                 if (isAtBasket && isWithinBasket) {
                     item.element.remove();
-                    catchCucumber(item.points, item.isGolden);
+                    catchCucumber(item.points, item.isGolden, item.feverGolden);
                     return false;
                 }
                 if (item.y > stage.clientHeight + 45) {
@@ -2177,6 +2232,9 @@
             cucumberGame.active = true;
             cucumberGame.caught = 0;
             cucumberGame.caughtPieces = 0;
+            cucumberGame.feverProgress = 0;
+            cucumberGame.feverUntil = 0;
+            stage.classList.remove('fever');
             cucumberGame.basketX = stage.clientWidth / 2;
             cucumberGame.lastFrameAt = 0;
             cucumberGame.lastSpawnAt = performance.now();
@@ -2198,6 +2256,7 @@
             if (cucumberGame.frame) cancelAnimationFrame(cucumberGame.frame);
             cucumberGame.frame = null;
             cucumberGame.active = false;
+            document.getElementById('cucumberGameStage')?.classList.remove('fever');
             cucumberGame.items.forEach((item) => item.element.remove());
             cucumberGame.items = [];
             if (cucumberGame.pendingPoints > 0) flushCucumberPoints();
@@ -2890,14 +2949,16 @@
                 if (e.pointerType === 'touch') {
                     canvasTouchPoints.set(e.pointerId, { x: e.clientX, y: e.clientY });
                     if (canvasTouchPoints.size === 2) {
-                        cancelPendingTouchDraw();
+                        cancelTouchGestureDrawing();
                         beginCanvasPinch();
-                        isDrawing = false;
                         hideBrushCursor();
                         e.preventDefault();
                         return;
                     }
-                    queueTouchDrawing(e);
+                    touchGestureSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    touchGestureCancelled = false;
+                    startDraw(e);
+                    if (isDrawing) canvas.setPointerCapture?.(e.pointerId);
                     e.preventDefault();
                     return;
                 }
@@ -2914,7 +2975,7 @@
                         e.preventDefault();
                         return;
                     }
-                    if (pendingTouchDraw?.pointerId === e.pointerId) {
+                    if (touchGestureCancelled) {
                         e.preventDefault();
                         return;
                     }
@@ -2922,38 +2983,23 @@
                 drawing(e);
             });
             const endCanvasPointer = (e) => {
-                const shouldFinishPendingTouch = e.pointerType === 'touch' && pendingTouchDraw?.pointerId === e.pointerId && !pinchStart;
-                if (shouldFinishPendingTouch) {
-                    cancelPendingTouchDraw();
-                    startDraw(e);
-                }
                 canvasTouchPoints.delete(e.pointerId);
                 if (canvasTouchPoints.size < 2) endCanvasPinch();
-                stopDraw();
+                if (!touchGestureCancelled) stopDraw();
+                if (canvasTouchPoints.size === 0) {
+                    touchGestureSnapshot = null;
+                    touchGestureCancelled = false;
+                }
             };
             canvas.addEventListener('pointerup', endCanvasPointer);
             canvas.addEventListener('pointercancel', endCanvasPointer);
             canvas.addEventListener('pointerleave', hideBrushCursor);
         }
 
-        function queueTouchDrawing(e) {
-            cancelPendingTouchDraw();
-            pendingTouchDraw = {
-                pointerId: e.pointerId,
-                event: e,
-                timer: setTimeout(() => {
-                    if (!pendingTouchDraw || canvasTouchPoints.size !== 1 || !canvasTouchPoints.has(e.pointerId) || pinchStart) return;
-                    startDraw(e);
-                    if (isDrawing) canvas.setPointerCapture?.(e.pointerId);
-                    pendingTouchDraw = null;
-                }, 90)
-            };
-        }
-
-        function cancelPendingTouchDraw() {
-            if (!pendingTouchDraw) return;
-            clearTimeout(pendingTouchDraw.timer);
-            pendingTouchDraw = null;
+        function cancelTouchGestureDrawing() {
+            if (touchGestureSnapshot) ctx.putImageData(touchGestureSnapshot, 0, 0);
+            touchGestureCancelled = true;
+            isDrawing = false;
         }
 
         function applyCanvasView() {
