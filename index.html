@@ -46,6 +46,7 @@
             updateDoc, 
             getDoc,
             getDocs,
+            collectionGroup,
             runTransaction
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -68,7 +69,7 @@
             auth, db, appId, signInAnonymously, createUserWithEmailAndPassword, 
             signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, 
             signOut, onAuthStateChanged, collection, doc, setDoc, getDoc, 
-            getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, runTransaction
+            getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, collectionGroup, runTransaction
         };
     </script>
 
@@ -494,7 +495,7 @@
                             <div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-amber-700">PLAY</div>
                         </div>
                         <div class="flex items-center justify-between p-4">
-                            <div><h3 class="font-black text-slate-800">연필 깎기</h3><p class="mt-0.5 text-[11px] text-slate-500">연필을 깎아 포인트를 모으세요.</p></div>
+                            <div><h3 class="font-black text-slate-800">연필 깎기</h3><p class="mt-0.5 text-[11px] text-slate-500">연필을 깎아 포인트를 모으세요.</p><p class="mt-1 text-[10px] font-black text-amber-600">누적 <span id="pencilCardCount">0</span>자루</p></div>
                             <i class="fa-solid fa-chevron-right text-sm text-slate-300"></i>
                         </div>
                     </button>
@@ -506,7 +507,7 @@
                             <div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-emerald-700">PLAY</div>
                         </div>
                         <div class="flex items-center justify-between p-4">
-                            <div><h3 class="font-black text-slate-800">오이 받기</h3><p class="mt-0.5 text-[11px] text-slate-500">하늘에서 떨어지는 오이를 바구니에 담으세요.</p></div>
+                            <div><h3 class="font-black text-slate-800">오이 받기</h3><p class="mt-0.5 text-[11px] text-slate-500">하늘에서 떨어지는 오이를 바구니에 담으세요.</p><p class="mt-1 text-[10px] font-black text-emerald-600">누적 <span id="cucumberCardCount">0</span>조각</p></div>
                             <i class="fa-solid fa-chevron-right text-sm text-slate-300"></i>
                         </div>
                     </button>
@@ -517,7 +518,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <button onclick="closePencilGame()" class="mb-1 flex items-center gap-1 text-[10px] font-bold text-slate-400"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button>
-                            <h3 class="font-black text-slate-800">연필 깎이</h3>
+                            <h3 class="font-black text-slate-800">연필 깎기</h3>
                             <p class="text-[11px] text-slate-500 mt-0.5">화면을 눌러 연필을 100단계까지 깎아보세요.</p>
                         </div>
                         <div id="pencilStepBadge" class="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-black text-emerald-700">0 / 100</div>
@@ -534,6 +535,10 @@
                         <div class="rounded-lg bg-sky-50 py-2"><p class="text-[10px] font-bold text-sky-500">× 2</p><p class="text-xs font-black text-sky-700">20%</p></div>
                         <div class="rounded-lg bg-violet-50 py-2"><p class="text-[10px] font-bold text-violet-500">× 10</p><p class="text-xs font-black text-violet-700">5%</p></div>
                     </div>
+                    <div class="rounded-xl border border-amber-100 bg-amber-50/60 p-3">
+                        <div class="mb-2 flex items-center justify-between"><h4 class="text-xs font-black text-amber-900"><i class="fa-solid fa-trophy text-amber-500"></i> 연필 깎기 랭킹</h4><span class="text-[10px] font-bold text-amber-600">완성 자루</span></div>
+                        <ol id="pencilRanking" class="space-y-1 text-[11px] text-slate-500"><li>랭킹을 불러오는 중입니다.</li></ol>
+                    </div>
                 </div>
 
                 <div id="cucumberGamePanel" class="hidden rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
@@ -547,6 +552,10 @@
                     </div>
                     <div id="cucumberGameStage" class="cucumber-game-stage rounded-xl border border-emerald-200" aria-label="오이 받기 게임판">
                         <div id="cucumberBasket" class="cucumber-basket"></div>
+                    </div>
+                    <div class="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                        <div class="mb-2 flex items-center justify-between"><h4 class="text-xs font-black text-emerald-900"><i class="fa-solid fa-trophy text-amber-500"></i> 오이 받기 랭킹</h4><span class="text-[10px] font-bold text-emerald-600">누적 조각</span></div>
+                        <ol id="cucumberRanking" class="space-y-1 text-[11px] text-slate-500"><li>랭킹을 불러오는 중입니다.</li></ol>
                     </div>
                 </div>
             </section>
@@ -823,7 +832,7 @@
         let pencilThree = null;
         let pencilSelectThree = null;
         let pointDingTimer = null;
-        let cucumberGame = { active: false, basketX: 0, items: [], lastSpawnAt: 0, lastFrameAt: 0, frame: null, caught: 0, pendingPoints: 0, flushTimer: null };
+        let cucumberGame = { active: false, basketX: 0, items: [], lastSpawnAt: 0, lastFrameAt: 0, frame: null, caught: 0, caughtPieces: 0, pendingPoints: 0, pendingPieces: 0, flushTimer: null };
         
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -1036,6 +1045,7 @@
                             userData = snap.data();
                             updatePointsUI();
                             renderPencilGame();
+                            renderMiniGameStats();
                             document.getElementById('settingsNickname').innerText = userData.nickname || '작가';
                             checkCheckInStatus();
                             
@@ -1046,7 +1056,7 @@
                             }
                         } else {
                             const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
-                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0 };
+                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0, cucumberCaughtCount: 0 };
                             setDoc(userRef, newProfile);
                             pendingSignupNickname = '';
                         }
@@ -1409,48 +1419,88 @@
 
         window.placeBid = async function(id, currentBidAmount) {
             if (!currentUser) return;
-            const { db, appId, doc, getDoc, updateDoc } = window.FB;
-            const targetAuction = auctionItemsList.find(a => a.id === id);
-            if (!targetAuction) return;
-            
-            if (targetAuction.artistUid === currentUser.uid) return showToast('본인이 출품한 작품에는 입찰할 수 없습니다.');
-            if (Date.now() - targetAuction.lastBidTime >= SIX_HOURS_MS) return showToast('입찰 시간이 마감된 경매입니다.');
-            
-            const nextBid = currentBidAmount + 50;
-            if (userData.points < nextBid) return showToast('사용 가능한 포인트(P)가 부족합니다!');
-
-            const prevBidderUid = targetAuction.highestBidderUid;
+            const input = document.getElementById(`bidAmount-${id}`);
+            const requestedBid = input ? Number(input.value) : currentBidAmount + 50;
+            if (!Number.isInteger(requestedBid) || requestedBid <= currentBidAmount) return showToast('현재 입찰가보다 높은 정수 금액을 입력해 주세요.');
+            const { db, appId, doc, runTransaction } = window.FB;
+            const auctionRef = doc(db, 'artifacts', appId, 'public', 'data', 'auctions', id);
+            const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+            let completedBid = 0;
 
             try {
-                if (prevBidderUid) {
-                    const prevUserRef = doc(db, 'artifacts', appId, 'users', prevBidderUid, 'profile', 'data');
-                    const prevUserSnap = await getDoc(prevUserRef);
-                    if(prevUserSnap.exists()) {
-                        const prevUserData = prevUserSnap.data();
-                        await updateDoc(prevUserRef, {
-                            lockedPoints: Math.max(0, (prevUserData.lockedPoints || 0) - currentBidAmount),
-                            points: (prevUserData.points || 0) + currentBidAmount
-                        });
+                await runTransaction(db, async (transaction) => {
+                    const auctionSnap = await transaction.get(auctionRef);
+                    const mySnap = await transaction.get(myRef);
+                    if (!auctionSnap.exists() || !mySnap.exists()) throw new Error('경매 정보를 찾을 수 없습니다.');
+                    const auction = auctionSnap.data();
+                    const profile = mySnap.data();
+                    if (auction.status !== 'active' || Date.now() - auction.lastBidTime >= SIX_HOURS_MS) throw new Error('입찰 시간이 마감되었습니다.');
+                    if (auction.artistUid === currentUser.uid) throw new Error('본인이 출품한 작품에는 입찰할 수 없습니다.');
+                    if (requestedBid <= auction.currentBid) throw new Error('다른 입찰로 가격이 변경되었습니다. 더 높은 금액을 입력해 주세요.');
+                    if ((profile.points || 0) < requestedBid) throw new Error('사용 가능한 포인트(P)가 부족합니다.');
+
+                    if (auction.highestBidderUid) {
+                        const previousBidderRef = doc(db, 'artifacts', appId, 'users', auction.highestBidderUid, 'profile', 'data');
+                        const previousBidderSnap = await transaction.get(previousBidderRef);
+                        if (previousBidderSnap.exists()) {
+                            const previousProfile = previousBidderSnap.data();
+                            transaction.update(previousBidderRef, {
+                                lockedPoints: Math.max(0, (previousProfile.lockedPoints || 0) - auction.currentBid),
+                                points: (previousProfile.points || 0) + auction.currentBid
+                            });
+                        }
                     }
-                }
 
-                const myRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                await updateDoc(myRef, {
-                    points: userData.points - nextBid,
-                    lockedPoints: (userData.lockedPoints || 0) + nextBid
+                    transaction.update(myRef, {
+                        points: (profile.points || 0) - requestedBid,
+                        lockedPoints: (profile.lockedPoints || 0) + requestedBid
+                    });
+                    transaction.update(auctionRef, {
+                        currentBid: requestedBid,
+                        bidsCount: (auction.bidsCount || 0) + 1,
+                        highestBidder: profile.nickname || '작가',
+                        highestBidderUid: currentUser.uid,
+                        lastBidTime: Date.now()
+                    });
+                    completedBid = requestedBid;
                 });
-
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'auctions', id), {
-                    currentBid: nextBid, 
-                    bidsCount: (targetAuction.bidsCount || 0) + 1, 
-                    highestBidder: userData.nickname || '작가',
-                    highestBidderUid: currentUser.uid, 
-                    lastBidTime: Date.now()
-                });
-                
-                showToast(`🎉 ${nextBid}P 로 입찰 완료!\n입찰금액이 예치금으로 전환되었습니다.`);
-            } catch (e) { showToast("입찰 처리 중 오류가 발생했습니다."); }
+                showToast(`🎉 ${completedBid}P 로 입찰 완료!\n입찰금액이 예치금으로 전환되었습니다.`);
+            } catch (error) { showToast(error.message || '입찰 처리 중 오류가 발생했습니다.'); }
         }
+
+        window.cancelAuction = async function(id) {
+            if (!currentUser || !confirm('입찰이 없는 이 작품을 보관함으로 되돌릴까요?')) return;
+            const { db, appId, doc, runTransaction } = window.FB;
+            const auctionRef = doc(db, 'artifacts', appId, 'public', 'data', 'auctions', id);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const auctionSnap = await transaction.get(auctionRef);
+                    if (!auctionSnap.exists()) throw new Error('경매 정보를 찾을 수 없습니다.');
+                    const auction = auctionSnap.data();
+                    if (auction.artistUid !== currentUser.uid) throw new Error('출품자만 취소할 수 있습니다.');
+                    if ((auction.bidsCount || 0) > 0 || auction.highestBidderUid) throw new Error('입찰이 시작된 경매는 취소할 수 없습니다.');
+                    const drawingRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'drawings', id);
+                    transaction.set(drawingRef, { auctionId: id, title: auction.title, image: auction.image, createdAt: Date.now() });
+                    transaction.delete(auctionRef);
+                });
+                showToast('경매를 취소하고 작품을 보관함으로 돌려놓았습니다.');
+            } catch (error) { showToast(error.message || '경매 취소 중 오류가 발생했습니다.'); }
+        };
+
+        window.editGalleryDrawing = function(image, title) {
+            const savedImage = new Image();
+            savedImage.onload = () => {
+                clearCanvas();
+                ctx.drawImage(savedImage, 0, 0, canvas.width, canvas.height);
+                undoStack = [];
+                redoStack = [];
+                saveState();
+                switchTab('draw');
+                showToast(`[${title}] 작품을 불러왔습니다. 이어서 편집할 수 있습니다.`);
+            };
+            savedImage.onerror = () => showToast('작품을 불러오지 못했습니다.');
+            savedImage.src = image;
+        };
 
         window.claimDailyReward = async function() {
             if (!currentUser) return;
@@ -1610,9 +1660,16 @@
                                 <span class="text-lg font-black text-rose-500">${item.currentBid} <span class="text-xs font-bold">P</span></span>
                                 ${item.highestBidder ? `<span class="block text-[10px] text-slate-500 mt-0.5">최고 입찰자: <b>${item.highestBidder}</b></span>` : ''}
                             </div>
-                            <button onclick="placeBid('${item.id}', ${item.currentBid})" class="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-transform">
-                                <i class="fa-solid fa-gavel"></i> 입찰 (+50P)
-                            </button>
+                            ${item.artistUid === currentUser?.uid ? `
+                                <button onclick="cancelAuction('${item.id}')" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-transform disabled:cursor-not-allowed disabled:opacity-50" ${item.bidsCount ? 'disabled title="입찰이 시작된 경매는 취소할 수 없습니다."' : ''}>
+                                    <i class="fa-solid fa-rotate-left"></i> ${item.bidsCount ? '입찰 진행 중' : '출품 취소'}
+                                </button>` : `
+                                <div class="flex items-center gap-1.5">
+                                    <input id="bidAmount-${item.id}" type="number" min="${item.currentBid + 1}" step="1" value="${item.currentBid + 50}" class="w-24 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-right text-xs font-black text-slate-700 focus:border-rose-400 focus:outline-none" aria-label="입찰 금액">
+                                    <button onclick="placeBid('${item.id}', ${item.currentBid})" class="px-3 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-md active:scale-95 transition-transform">
+                                        <i class="fa-solid fa-gavel"></i> 입찰
+                                    </button>
+                                </div>`}
                         </div>
                     </div>
                 `;
@@ -1653,6 +1710,9 @@
                         <div class="flex gap-1 pt-1">
                             <button onclick="openAuctionModalFromGallery('${item.id}', '${item.title.replace(/'/g, "\\'")}', '${item.image}')" class="flex-1 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-1">
                                 <i class="fa-solid fa-gavel"></i> 출품
+                            </button>
+                            <button onclick="editGalleryDrawing('${item.image}', '${item.title.replace(/'/g, "\\'")}')" class="py-1.5 px-2 bg-slate-100 hover:bg-sky-50 text-slate-400 hover:text-sky-500 rounded-lg text-[10px] font-bold active:scale-95 transition-colors" title="이어 편집">
+                                <i class="fa-solid fa-pen-to-square"></i>
                             </button>
                             <button onclick="setProfileFromGallery('${item.image}')" class="py-1.5 px-2 bg-slate-100 hover:bg-emerald-50 text-slate-400 hover:text-emerald-500 rounded-lg text-[10px] font-bold active:scale-95 transition-colors" title="프로필로 설정">
                                 <i class="fa-solid fa-id-badge"></i>
@@ -1748,6 +1808,7 @@
             if (tabName === 'points') {
                 initPencilSelectScene();
                 renderPencilGame();
+                renderMiniGameStats();
             }
             if (tabName !== 'points') {
                 stopCucumberGame();
@@ -1760,6 +1821,7 @@
             document.getElementById('pencilCompletedSummary').classList.remove('hidden');
             initPencilThreeScene();
             renderPencilGame();
+            loadMiniGameRanking('pencil');
         };
 
         window.closePencilGame = function() {
@@ -1774,6 +1836,7 @@
             document.getElementById('pencilCompletedSummary').classList.add('hidden');
             document.getElementById('cucumberGamePanel').classList.remove('hidden');
             startCucumberGame();
+            loadMiniGameRanking('cucumber');
         };
 
         window.closeCucumberGame = function() {
@@ -1808,11 +1871,15 @@
 
         function catchCucumber(points) {
             cucumberGame.caught += points;
+            cucumberGame.caughtPieces += 1;
             cucumberGame.pendingPoints += points;
+            cucumberGame.pendingPieces += 1;
             const count = document.getElementById('cucumberCatchCount');
             if (count) count.innerText = cucumberGame.caught;
             const previousPoints = userData.points || 0;
             userData.points = previousPoints + points;
+            userData.cucumberCaughtCount = (userData.cucumberCaughtCount || 0) + 1;
+            renderMiniGameStats();
             animatePointGain(previousPoints, userData.points);
             clearTimeout(cucumberGame.flushTimer);
             cucumberGame.flushTimer = setTimeout(flushCucumberPoints, 550);
@@ -1820,7 +1887,9 @@
 
         async function flushCucumberPoints() {
             const pointsToSave = cucumberGame.pendingPoints;
+            const piecesToSave = cucumberGame.pendingPieces;
             cucumberGame.pendingPoints = 0;
+            cucumberGame.pendingPieces = 0;
             if (!currentUser?.uid || pointsToSave <= 0) return;
             const { db, appId, doc, runTransaction } = window.FB;
             try {
@@ -1828,10 +1897,14 @@
                 await runTransaction(db, async (transaction) => {
                     const profileSnap = await transaction.get(profileRef);
                     if (!profileSnap.exists()) throw new Error('Profile is missing.');
-                    transaction.update(profileRef, { points: (profileSnap.data().points || 0) + pointsToSave });
+                    transaction.update(profileRef, {
+                        points: (profileSnap.data().points || 0) + pointsToSave,
+                        cucumberCaughtCount: (profileSnap.data().cucumberCaughtCount || 0) + piecesToSave
+                    });
                 });
             } catch (error) {
                 cucumberGame.pendingPoints += pointsToSave;
+                cucumberGame.pendingPieces += piecesToSave;
                 console.error('Cucumber reward error', error);
             }
         }
@@ -1875,6 +1948,7 @@
             stopCucumberGame();
             cucumberGame.active = true;
             cucumberGame.caught = 0;
+            cucumberGame.caughtPieces = 0;
             cucumberGame.basketX = stage.clientWidth / 2;
             cucumberGame.lastFrameAt = 0;
             cucumberGame.lastSpawnAt = performance.now();
@@ -1899,6 +1973,39 @@
             cucumberGame.items.forEach((item) => item.element.remove());
             cucumberGame.items = [];
             if (cucumberGame.pendingPoints > 0) flushCucumberPoints();
+        }
+
+        function renderMiniGameStats() {
+            const pencilCardCount = document.getElementById('pencilCardCount');
+            const cucumberCardCount = document.getElementById('cucumberCardCount');
+            if (pencilCardCount) pencilCardCount.innerText = (userData.pencilSharpenedCount || 0).toLocaleString();
+            if (cucumberCardCount) cucumberCardCount.innerText = (userData.cucumberCaughtCount || 0).toLocaleString();
+        }
+
+        async function loadMiniGameRanking(game) {
+            const list = document.getElementById(game === 'pencil' ? 'pencilRanking' : 'cucumberRanking');
+            if (!list || !window.FB) return;
+            list.innerHTML = '<li>랭킹을 불러오는 중입니다.</li>';
+            const scoreKey = game === 'pencil' ? 'pencilSharpenedCount' : 'cucumberCaughtCount';
+            const unit = game === 'pencil' ? '자루' : '조각';
+            try {
+                const { db, collectionGroup, getDocs } = window.FB;
+                const profiles = await getDocs(collectionGroup(db, 'profile'));
+                const ranking = [];
+                profiles.forEach((profileDoc) => {
+                    const profile = profileDoc.data();
+                    const score = profile[scoreKey] || 0;
+                    if (score > 0) ranking.push({ name: profile.nickname || '작가', score });
+                });
+                ranking.sort((first, second) => second.score - first.score || first.name.localeCompare(second.name, 'ko'));
+                const topRanks = ranking.slice(0, 5);
+                list.innerHTML = topRanks.length
+                    ? topRanks.map((entry, index) => `<li class="flex items-center justify-between"><span><b class="mr-2 text-slate-700">${index + 1}</b>${entry.name}</span><b class="text-slate-700">${entry.score.toLocaleString()}${unit}</b></li>`).join('')
+                    : '<li class="text-slate-400">아직 기록이 없습니다.</li>';
+            } catch (error) {
+                console.error('Mini-game ranking error', error);
+                list.innerHTML = '<li class="text-slate-400">랭킹을 불러오지 못했습니다.</li>';
+            }
         }
 
         function showPencilFallback(elementId) {
@@ -1954,7 +2061,7 @@
 
             const pencil = new THREE.Group();
             pencil.rotation.z = 0;
-            pencil.position.set(-0.2, -0.15, 0);
+            pencil.position.set(-14, -0.15, 0);
             scene.add(pencil);
             const woodMaterial = new THREE.MeshStandardMaterial({ color: 0xc8955e, roughness: 0.72 });
             const leadMaterial = new THREE.MeshStandardMaterial({ color: 0x181d27, metalness: 0.42, roughness: 0.3 });
@@ -1994,7 +2101,7 @@
             lead.material.depthTest = false;
             pencil.add(lead);
 
-            pencilThree = { scene, camera, renderer, pencil, wood, lead, shavings: [], rollTarget: 0, rollAngle: 0, failUntil: 0, flyStart: 0, bonusSprayUntil: 0, nextBonusSpray: 0, frame: null };
+            pencilThree = { scene, camera, renderer, pencil, wood, lead, shavings: [], rollTarget: 0, rollAngle: 0, failUntil: 0, flyStart: 0, entryStart: performance.now(), bonusSprayUntil: 0, nextBonusSpray: 0, frame: null };
             resizePencilThreeScene();
             animatePencilThreeScene();
         }
@@ -2122,12 +2229,13 @@
 
         function resetPencilThree() {
             if (!pencilThree) return;
-            pencilThree.pencil.position.set(-0.2, -0.15, 0);
+            pencilThree.pencil.position.set(-14, -0.15, 0);
             pencilThree.pencil.rotation.set(0, 0, 0);
             pencilThree.rollAngle = 0;
             pencilThree.rollTarget = 0;
             pencilThree.rollEase = 0.2;
             pencilThree.flyStart = 0;
+            pencilThree.entryStart = performance.now();
             pencilThree.bonusSprayUntil = 0;
             pencilThree.pencil.scale.set(1, 1, 1);
         }
@@ -2140,7 +2248,14 @@
             three.rollAngle += (three.rollTarget - three.rollAngle) * (three.rollEase || 0.2);
             three.pencil.rotation.x = three.rollAngle;
             three.pencil.rotation.z = 0;
-            if (three.failUntil > now) {
+            if (three.entryStart && now - three.entryStart < 750) {
+                const progress = Math.min(1, (now - three.entryStart) / 750);
+                const easedProgress = 1 - Math.pow(1 - progress, 3);
+                three.pencil.position.x = -14 + 13.8 * easedProgress;
+                three.pencil.position.y = -0.15 + Math.sin(progress * Math.PI) * 0.3;
+                three.pencil.rotation.z = -0.35 + easedProgress * 0.35;
+                if (progress >= 1) three.entryStart = 0;
+            } else if (three.failUntil > now) {
                 three.pencil.position.x = -0.2 + Math.sin(now * 0.06) * 0.035;
                 three.pencil.position.y = -0.15;
             } else if (!three.flyStart) {
