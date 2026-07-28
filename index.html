@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pickle 🥒</title>
+    <title>Pickle</title>
     
     <!-- Favicon & Web App Icon 적용 -->
     <link rel="icon" href="logo.png" type="image/png">
@@ -278,8 +278,8 @@
                         <span class="bg-white/20 backdrop-blur-md text-xs font-bold px-2.5 py-1 rounded-full text-white inline-block mb-2">
                             ✨ 오늘 출석하면 +100P
                         </span>
-                        <h2 class="text-2xl font-black leading-tight">직접 그리고,<br>실시간 경매까지!</h2>
-                        <p class="text-emerald-100 text-sm mt-1">나만의 그림을 픽클에서 가치를 인정받으세요.</p>
+                        <h2 id="homeHeroTitle" class="text-2xl font-black leading-tight">직접 그리고,<br>실시간 경매까지!</h2>
+                        <p id="homeHeroSubtitle" class="text-emerald-100 text-sm mt-1">나만의 그림을 픽클에서 가치를 인정받으세요.</p>
                         
                         <button onclick="claimDailyReward()" id="checkInBtn" class="mt-4 bg-white text-emerald-700 font-bold px-4 py-2 rounded-xl text-sm shadow-sm active:scale-95 transition-transform flex items-center gap-1.5">
                             <i class="fa-solid fa-calendar-check text-emerald-500"></i> 출석 보상 받기
@@ -322,8 +322,8 @@
                 <!-- 캔버스 영역 -->
                 <div class="w-full min-h-0 relative mb-2 flex justify-center items-center flex-shrink-0 max-h-[50vh]">
                     <div class="relative bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-shrink-0 aspect-square w-full h-full max-h-full mx-auto" style="max-height: 45vh;">
-                        <canvas id="paintCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
-                        <canvas id="overlayCanvas" width="360" height="360" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
+                        <canvas id="paintCanvas" width="2000" height="2000" class="absolute top-0 left-0 w-full h-full touch-none cursor-crosshair rounded-xl"></canvas>
+                        <canvas id="overlayCanvas" width="2000" height="2000" class="absolute top-0 left-0 w-full h-full touch-none z-10 hidden rounded-xl"></canvas>
 
                         <!-- 변환 조절 플로팅 UI -->
                         <div id="imageTransformUI" class="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-md p-2 rounded-xl shadow-xl flex flex-col gap-1.5 z-30 hidden border border-slate-200">
@@ -489,8 +489,12 @@
             <button onclick="switchTab('draw')" id="nav-draw" class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
                 <i class="fa-solid fa-palette text-lg"></i><span class="text-[10px] font-bold">스튜디오</span>
             </button>
-            <button onclick="switchTab('auction')" id="nav-auction" class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
-                <i class="fa-solid fa-gavel text-lg"></i><span class="text-[10px] font-bold">경매</span>
+            <button onclick="switchTab('auction')" id="nav-auction" class="nav-btn relative flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
+                <span class="relative inline-flex items-center justify-center">
+                    <i class="fa-solid fa-gavel text-lg"></i>
+                    <span id="nav-auction-new-badge" class="hidden absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-rose-500 text-[8px] font-black text-white flex items-center justify-center shadow-sm">NEW</span>
+                </span>
+                <span class="text-[10px] font-bold">경매</span>
             </button>
             <button onclick="switchTab('gallery')" id="nav-gallery" class="nav-btn flex-1 py-3 flex flex-col items-center gap-1 text-slate-400 transition-colors">
                 <i class="fa-solid fa-images text-lg"></i><span class="text-[10px] font-bold">갤러리</span>
@@ -708,13 +712,71 @@
         let lastTfPos = {x: 0, y: 0};
 
         let favColors = ['#000000', '#ffffff', '#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
+        let activePenPointerId = null;
+
+        function shouldIgnorePointerInput(e) {
+            if (e.pointerType === 'pen') {
+                activePenPointerId = e.pointerId;
+                return false;
+            }
+
+            if (activePenPointerId !== null && e.pointerType === 'touch') {
+                e.preventDefault();
+                return true;
+            }
+
+            return false;
+        }
+
+        function handleCanvasPointerDown(e) {
+            if (shouldIgnorePointerInput(e)) return;
+            if (e.pointerType === 'pen') {
+                activePenPointerId = e.pointerId;
+            }
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+            startDraw(e);
+        }
+
+        function handleCanvasPointerMove(e) {
+            if (shouldIgnorePointerInput(e)) return;
+            drawing(e);
+        }
+
+        function handleCanvasPointerUp(e) {
+            if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) {
+                activePenPointerId = null;
+            }
+            stopDraw(e);
+        }
+
+        function handleCanvasPointerCancel(e) {
+            if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) {
+                activePenPointerId = null;
+            }
+            stopDraw(e);
+        }
 
         // UI 헬퍼
+        const homeHeroPhrases = [
+            { title: '직접 그리고,<br>실시간 경매까지!', subtitle: '나만의 그림을 픽클에서 가치를 인정받으세요.' },
+            { title: '한 번의 터치로,<br>작품의 새 이름을 짓다', subtitle: '당신의 그림이 경매장에서 빛을 발할 수 있어요.' },
+            { title: '캔버스 위에 담는<br>오늘의 감각', subtitle: '작은 스케치도 픽클의 특별한 가치가 됩니다.' },
+            { title: '그림은 그리면서,<br>가치는 경매로', subtitle: '당신의 창작이 실시간으로 인정받는 순간.' }
+        ];
+
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toastMsg').innerText = msg;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function renderHomeHero() {
+            const hero = homeHeroPhrases[Math.floor(Math.random() * homeHeroPhrases.length)];
+            const titleEl = document.getElementById('homeHeroTitle');
+            const subtitleEl = document.getElementById('homeHeroSubtitle');
+            if (titleEl) titleEl.innerHTML = hero.title;
+            if (subtitleEl) subtitleEl.innerText = hero.subtitle;
         }
 
         function showAlertModal(title, message, icon = '🎉', imgUrl = null) {
@@ -769,7 +831,7 @@
 
         // 앱 로드
         window.addEventListener('load', () => {
-            initCanvas();
+            renderHomeHero();
             setupImageTransformEvents();
             renderFavColors();
             initColorPicker(); 
@@ -1274,6 +1336,13 @@
             document.getElementById('artistProfileModal').classList.add('hidden');
         };
 
+        function updateAuctionNavBadge(hasNew = false) {
+            const badge = document.getElementById('nav-auction-new-badge');
+            if (badge) {
+                badge.classList.toggle('hidden', !hasNew);
+            }
+        }
+
         function renderAuctions() {
             const container = document.getElementById('auctionList');
             container.innerHTML = '';
@@ -1282,6 +1351,9 @@
                 return;
             }
             const now = Date.now();
+            const seenAuctions = JSON.parse(localStorage.getItem('pickleSeenAuctions') || '[]');
+            const hasUnseen = auctionItemsList.some(item => !seenAuctions.includes(item.id));
+            updateAuctionNavBadge(hasUnseen);
             auctionItemsList.forEach(item => {
                 const remainingMs = (item.lastBidTime + SIX_HOURS_MS) - now;
                 let timeBadge = '';
@@ -1295,6 +1367,18 @@
 
                 const isLiked = item.likes && currentUser ? item.likes.includes(currentUser.uid) : false;
                 const likeCount = item.likes ? item.likes.length : 0;
+                const isNew = !seenAuctions.includes(item.id);
+                if (isNew) {
+                    seenAuctions.push(item.id);
+                    localStorage.setItem('pickleSeenAuctions', JSON.stringify(seenAuctions));
+                }
+                const isHot = likeCount >= 3 || (item.bidsCount || 0) >= 3;
+                const badgeHtml = `
+                    <div class="absolute top-3 left-3 flex gap-1.5 z-10 pointer-events-none">
+                        ${isNew ? '<span class="bg-rose-500/90 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">NEW</span>' : ''}
+                        ${isHot ? '<span class="bg-amber-500/90 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-sm">HOT</span>' : ''}
+                    </div>
+                `;
                 
                 const profileImgHtml = item.artistProfileImage 
                     ? `<img src="${item.artistProfileImage}" class="w-full h-full object-cover">`
@@ -1309,6 +1393,7 @@
                             <i class="fa-solid fa-magnifying-glass-plus text-base"></i> 터치하여 크게 보기
                         </div>
                         ${timeBadge}
+                        ${badgeHtml}
                         <button onclick="event.stopPropagation(); toggleLike('${item.id}')" class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md px-2.5 py-1.5 rounded-full shadow-md flex items-center gap-1.5 active:scale-90 transition-transform z-10">
                             <i class="${isLiked ? 'fa-solid text-rose-500' : 'fa-regular text-slate-400'} fa-heart text-sm"></i>
                             <span class="text-xs font-extrabold ${isLiked ? 'text-rose-500' : 'text-slate-600'}">${likeCount}</span>
@@ -1596,10 +1681,10 @@
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
             saveState(); 
             
-            canvas.addEventListener('mousedown', startDraw); canvas.addEventListener('mousemove', drawing); window.addEventListener('mouseup', stopDraw);
-            canvas.addEventListener('touchstart', (e)=>{e.preventDefault(); startDraw(e)}, {passive: false});
-            canvas.addEventListener('touchmove', (e)=>{e.preventDefault(); drawing(e)}, {passive: false});
-            window.addEventListener('touchend', stopDraw);
+            canvas.addEventListener('pointerdown', handleCanvasPointerDown, {passive: false});
+            canvas.addEventListener('pointermove', handleCanvasPointerMove, {passive: false});
+            window.addEventListener('pointerup', handleCanvasPointerUp);
+            window.addEventListener('pointercancel', handleCanvasPointerCancel);
         }
 
         window.toggleShapeMenu = function(e) {
@@ -1832,29 +1917,30 @@
         };
 
         function getHandleHit(x, y) {
-            const hSize = 20; 
-            const hit = (hx, hy) => Math.abs(x - hx) <= hSize && Math.abs(y - hy) <= hSize;
+            const hSize = 24; 
+            const hit = (hx, hy, size = hSize) => Math.abs(x - hx) <= size && Math.abs(y - hy) <= size;
             
             if (tfMode === 'line') {
-                if (hit(lineStartX, lineStartY)) return 'line_start';
-                if (hit(lineEndX, lineEndY)) return 'line_end';
+                if (hit(lineStartX, lineStartY, 16)) return 'line_start';
+                if (hit(lineEndX, lineEndY, 16)) return 'line_end';
                 const d = Math.abs((lineEndX - lineStartX)*(lineStartY - y) - (lineStartX - x)*(lineEndY - lineStartY)) / Math.sqrt(Math.pow(lineEndX - lineStartX, 2) + Math.pow(lineEndY - lineStartY, 2));
-                if (d < 10) return 'move';
+                if (d < 16) return 'move';
                 return null;
             }
 
-            if (hit(tfX + tfW/2, tfY - 30)) return 'rotate';
+            if (hit(tfX + tfW/2, tfY - 30, 18)) return 'rotate';
 
-            if (hit(tfX, tfY)) return 'tl';
-            if (hit(tfX + tfW/2, tfY)) return 'tc';
-            if (hit(tfX + tfW, tfY)) return 'tr';
-            if (hit(tfX, tfY + tfH/2)) return 'cl';
-            if (hit(tfX + tfW, tfY + tfH/2)) return 'cr';
-            if (hit(tfX, tfY + tfH)) return 'bl';
-            if (hit(tfX + tfW/2, tfY + tfH)) return 'bc';
-            if (hit(tfX + tfW, tfY + tfH)) return 'br';
+            if (hit(tfX, tfY, 18)) return 'tl';
+            if (hit(tfX + tfW/2, tfY, 18)) return 'tc';
+            if (hit(tfX + tfW, tfY, 18)) return 'tr';
+            if (hit(tfX, tfY + tfH/2, 18)) return 'cl';
+            if (hit(tfX + tfW, tfY + tfH/2, 18)) return 'cr';
+            if (hit(tfX, tfY + tfH, 18)) return 'bl';
+            if (hit(tfX + tfW/2, tfY + tfH, 18)) return 'bc';
+            if (hit(tfX + tfW, tfY + tfH, 18)) return 'br';
             
-            if (x >= tfX && x <= tfX + tfW && y >= tfY && y <= tfY + tfH) return 'move';
+            const padding = 18;
+            if (x >= tfX + padding && x <= tfX + tfW - padding && y >= tfY + padding && y <= tfY + tfH - padding) return 'move';
             return null;
         }
 
@@ -1932,8 +2018,24 @@
             }
             function endTfDrag() { isTfDragging = false; tfAction = null; }
 
-            overlayCanvas.addEventListener('mousedown', startTfDrag); overlayCanvas.addEventListener('mousemove', doTfDrag); window.addEventListener('mouseup', endTfDrag);
-            overlayCanvas.addEventListener('touchstart', startTfDrag, {passive: false}); overlayCanvas.addEventListener('touchmove', doTfDrag, {passive: false}); window.addEventListener('touchend', endTfDrag);
+            overlayCanvas.addEventListener('pointerdown', (e) => {
+                if (shouldIgnorePointerInput(e)) return;
+                if (e.pointerType === 'pen') activePenPointerId = e.pointerId;
+                e.currentTarget.setPointerCapture?.(e.pointerId);
+                startTfDrag(e);
+            }, {passive: false});
+            overlayCanvas.addEventListener('pointermove', (e) => {
+                if (shouldIgnorePointerInput(e)) return;
+                doTfDrag(e);
+            }, {passive: false});
+            window.addEventListener('pointerup', (e) => {
+                if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) activePenPointerId = null;
+                endTfDrag(e);
+            });
+            window.addEventListener('pointercancel', (e) => {
+                if (e.pointerType === 'pen' && e.pointerId === activePenPointerId) activePenPointerId = null;
+                endTfDrag(e);
+            });
         }
 
         function drawTransformedObject(ctxTarget) {
@@ -2015,7 +2117,7 @@
             oCtx.fillStyle = '#10b981'; oCtx.beginPath(); oCtx.arc(0, ly - 30, 6, 0, 2 * Math.PI); oCtx.fill();
 
             oCtx.fillStyle = '#ffffff';
-            const hSize = 8;
+            const hSize = 6;
             const drawHandle = (x, y) => { oCtx.fillRect(x - hSize/2, y - hSize/2, hSize, hSize); oCtx.strokeRect(x - hSize/2, y - hSize/2, hSize, hSize); };
             
             drawHandle(lx, ly); drawHandle(0, ly); drawHandle(lx + tfW, ly);
