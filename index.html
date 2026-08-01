@@ -479,7 +479,7 @@
             <!-- 2. DRAWING STUDIO -->
             <section id="view-draw" class="hidden absolute inset-0 px-4 pt-3 pb-24 flex flex-col overflow-y-auto no-scrollbar bg-slate-50">
                 <div class="flex justify-between items-center mb-2 flex-shrink-0">
-                    <h2 class="text-lg font-bold text-slate-800">스튜디오</h2>
+                    <h2 class="select-none text-lg font-bold text-slate-800">스튜디오</h2>
                     <div class="flex gap-1.5">
                         <button onclick="undo()" id="undoButton" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-left"></i></button>
                         <button onclick="redo()" id="redoButton" title="다시 실행 (Ctrl+Y)" aria-label="다시 실행" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-right"></i></button>
@@ -1010,6 +1010,7 @@
         let currentOpacity = 1;
         let currentColor = 'rgba(0, 0, 0, 1)';
         let applePencilOnly = false;
+        const APPLE_PENCIL_ONLY_STORAGE_KEY = 'pickle.applePencilOnly';
         let currentLineWidth = 4;
         let isDrawing = false, startX = 0, startY = 0, snapshot = null;
         let strokeLayer = null;
@@ -1477,11 +1478,14 @@
 
         window.toggleApplePencilOnly = function() {
             applePencilOnly = document.getElementById('applePencilOnlyToggle').checked;
+            try { localStorage.setItem(APPLE_PENCIL_ONLY_STORAGE_KEY, String(applePencilOnly)); } catch (error) { console.warn('Apple Pencil setting could not be saved', error); }
             showToast(applePencilOnly ? '애플펜슬 전용 모드가 켜졌습니다.' : '애플펜슬 전용 모드가 해제되었습니다.');
         };
 
         // 앱 로드
         window.addEventListener('load', () => {
+            try { applePencilOnly = localStorage.getItem(APPLE_PENCIL_ONLY_STORAGE_KEY) === 'true'; } catch (error) { console.warn('Apple Pencil setting could not be restored', error); }
+            document.getElementById('applePencilOnlyToggle').checked = applePencilOnly;
             seenAuctionIds = loadSeenAuctionIds();
             processedSettlements = loadProcessedSettlements();
             renderHomeHeroCopy();
