@@ -110,7 +110,12 @@
             overflow: hidden;
             transition: background-color 0.3s ease;
         }
-        .canvas-container { touch-action: none; }
+        .canvas-container, .canvas-container canvas {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
         #canvasSurface { transform-origin: center; transition: transform .12s ease-out; }
         #canvasSurface::after { content: ''; position: absolute; inset: 0; z-index: 20; pointer-events: none; border: 2px solid rgba(71, 85, 105, .72); border-radius: 13px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .82); }
         #canvasSurface.is-gesturing { transition: none; }
@@ -184,6 +189,7 @@
         }
         .hue-thumb {
             position: absolute;
+            top: 50%;
             width: 8px;
             height: 28px;
             background-color: white;
@@ -212,6 +218,21 @@
 
         .pencil-game-stage { background: linear-gradient(135deg, #d7f3f2 0%, #f8e7bc 58%, #f2d797 100%); overflow: hidden; isolation: isolate; touch-action: manipulation; }
         #pencilThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+        .bowling-select-scene { height: 160px; position: relative; overflow: visible; background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 52%, #cffafe 100%); }
+        .bowling-select-ball { position: absolute; left: 17%; bottom: -19px; width: 84px; height: 84px; border-radius: 50%; background: radial-gradient(circle at 30% 25%, #ffffff 0 7%, #f472b6 8% 35%, #be185d 72%); box-shadow: inset -12px -14px 18px rgba(90, 10, 50, .25), 7px 10px 12px rgba(70, 45, 80, .18); }
+        .bowling-select-pin { --pin-scale: 1; position: absolute; bottom: -22px; width: 62px; height: 112px; border-radius: 7px; clip-path: polygon(6% 0, 88% 6%, 100% 14%, 100% 100%, 0 100%, 0 8%); transform: scale(var(--pin-scale)) !important; transform-origin: bottom center; background: linear-gradient(90deg, #ffffff 0 72%, #cbd5e1 73% 88%, #94a3b8 89%); box-shadow: inset -4px 0 5px rgba(100,116,139,.16), 10px 10px 0 rgba(100,116,139,.3), 13px 13px 11px rgba(30,41,59,.18); }
+        .bowling-select-pin::before { content: ''; position: absolute; left: -2px; right: -2px; top: 42px; height: 34px; background: linear-gradient(90deg, #60a5fa 0 70%, #2563eb 71% 88%, #1d4ed8 89%); box-shadow: inset 2px 0 2px rgba(255,255,255,.28); }
+        .bowling-select-pin::after { content: 'P!CKLE'; position: absolute; z-index: 1; top: 54px; left: 4px; width: 43px; color: #2563eb; font-size: 8px; line-height: 10px; text-align: center; font-weight: 900; background: #ffffff; }
+        .bowling-select-scene + div { position: relative; z-index: 1; background: #ffffff; }
+        .bowling-game-stage { position: relative; height: 330px; overflow: hidden; touch-action: none; background: linear-gradient(180deg, #f7f3e8 0%, #e2d7c5 42%, #b98549 43%, #6e4528 100%); }
+        #bowlingThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+        #bowlingHint { pointer-events: none; opacity: 0; transition: opacity .16s ease, transform .16s ease; }
+        #bowlingHint.is-result { opacity: 1; bottom: 45%; font-size: 28px; letter-spacing: 0; text-shadow: 0 3px 0 rgba(15, 23, 42, .75), 0 0 18px currentColor; transform: scale(1.08); }
+        #bowlingHint.is-result.is-strike { left: 50%; right: auto; width: max-content; padding: 5px 16px; color: #fef08a; background: #713f12; border: 2px solid #facc15; border-radius: 999px; box-shadow: 0 3px 0 #422006, 0 0 18px rgba(250, 204, 21, .65); text-shadow: 0 2px 0 #422006; transform: translateX(-50%) scale(1.08); }
+        #bowlingHint.is-result.is-exiting { animation: bowlingResultOut .3s cubic-bezier(.4, 0, 1, 1) forwards; }
+        #bowlingHint.is-result.is-strike.is-exiting { animation-name: bowlingStrikeOut; }
+        @keyframes bowlingResultOut { to { opacity: 0; transform: translateY(-18px) scale(1.25); } }
+        @keyframes bowlingStrikeOut { to { opacity: 0; transform: translateX(-50%) translateY(-18px) scale(1.25); } }
         #brushCursor { position: absolute; z-index: 20; pointer-events: none; border: 1.5px solid rgba(15, 23, 42, 0.8); border-radius: 999px; box-shadow: 0 0 0 1px rgba(255,255,255,0.9); transform: translate(-50%, -50%); display: none; }
         .pencil-select-scene { height: 112px; position: relative; overflow: hidden; background: linear-gradient(115deg, #f6de70 0%, #fff3bd 48%, #d8f5df 100%); }
         #pencilSelectThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -281,7 +302,7 @@
         .weekly-checkin { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 16px; }
         .weekly-checkin-day { min-height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,.12); color: rgba(255,255,255,.72); }
         .weekly-checkin-day.is-today { box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: rgba(255,255,255,.88); }
-        .weekly-checkin-day.is-checked { background: #fff; color: #16845a; box-shadow: 0 3px 7px rgba(13, 94, 63, .18); }
+        .weekly-checkin-day.is-checked { background: rgba(255,255,255,.06); color: rgba(255,255,255,.96); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.7); }
         .weekly-bonus-box { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 14px; background: rgba(8, 90, 60, .2); }
         .weekly-bonus-icon { width: 38px; height: 38px; flex: 0 0 38px; display: flex; align-items: center; justify-content: center; border-radius: 11px; background: rgba(255,255,255,.14); color: rgba(255,255,255,.56); font-size: 18px; }
         .weekly-bonus-box.is-ready { border-color: rgba(254, 240, 138, .85); background: linear-gradient(100deg, rgba(234, 179, 8, .28), rgba(249, 115, 22, .3)); box-shadow: 0 8px 18px rgba(120, 53, 15, .16); }
@@ -415,7 +436,7 @@
                 </div>
 
                 <div class="pt-2"><h3 class="text-lg font-bold text-slate-800">스튜디오</h3></div>
-                <button onclick="switchTab('draw')" class="home-studio-scene relative flex min-h-[196px] w-full items-center overflow-hidden rounded-2xl border border-emerald-200 p-5 text-left shadow-sm"><div class="relative z-10 ml-auto w-[53%]"><p class="text-[10px] font-black tracking-[.16em] text-emerald-800">DRAWING STUDIO</p><h4 class="mt-1 text-xl font-black text-slate-800">그림을<br>그려보세요</h4><p class="mt-2 text-[11px] font-bold leading-relaxed text-slate-600">나만의 작품을 만들고<br>경매에 출품해 보세요.</p><span class="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">스튜디오 열기 <i class="fa-solid fa-arrow-right"></i></span></div><div class="home-easel" aria-hidden="true"></div><div class="home-paint-fallback" aria-hidden="true"></div><img src="paint.png" alt="" class="home-paint-placeholder" onload="this.previousElementSibling.style.display='none';this.previousElementSibling.previousElementSibling.style.display='none'" onerror="this.style.display='none'" aria-hidden="true"></button>
+                <button onclick="switchTab('draw')" class="home-studio-scene relative flex min-h-[196px] w-full items-center overflow-hidden rounded-2xl border border-emerald-200 p-5 text-left shadow-sm"><div class="relative z-10 ml-auto w-[53%]"><p class="text-[10px] font-black tracking-[.16em] text-emerald-800">DRAWING STUDIO</p><h4 class="mt-1 text-xl font-black text-slate-800">그림을<br>그려보세요</h4><p class="mt-2 text-[11px] font-bold leading-relaxed text-slate-600">나만의 작품을 만들고<br>경매에 출품해 보세요.</p><span class="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">스튜디오 열기 <i class="fa-solid fa-arrow-right"></i></span></div><div class="home-easel" aria-hidden="true"></div><div class="home-paint-fallback" aria-hidden="true"></div><img data-home-paint alt="" class="home-paint-placeholder" onload="this.previousElementSibling.style.display='none';this.previousElementSibling.previousElementSibling.style.display='none'" onerror="this.style.display='none'" aria-hidden="true"></button>
 
                 <div class="pt-1"><h3 class="text-lg font-bold text-slate-800">실시간 경매장</h3></div>
                 <div class="home-service-reel border border-slate-200 bg-white"><div id="homeAuctionTrack" class="home-service-track"></div></div>
@@ -431,8 +452,8 @@
                 <div class="flex justify-between items-center mb-2 flex-shrink-0">
                     <h2 class="text-lg font-bold text-slate-800">스튜디오</h2>
                     <div class="flex gap-1.5">
-                        <button onclick="undo()" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-left"></i></button>
-                        <button onclick="redo()" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button onclick="undo()" id="undoButton" title="실행 취소 (Ctrl+Z)" aria-label="실행 취소" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-left"></i></button>
+                        <button onclick="redo()" id="redoButton" title="다시 실행 (Ctrl+Y)" aria-label="다시 실행" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95"><i class="fa-solid fa-rotate-right"></i></button>
                         <button onclick="resetCanvasView()" class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold shadow-sm hover:bg-slate-50 active:scale-95" title="캔버스 보기 초기화" aria-label="캔버스 보기 초기화"><i class="fa-solid fa-compress"></i></button>
                         <button onclick="confirmClearCanvas()" class="px-2 py-1.5 bg-white border border-slate-200 text-rose-500 rounded-xl text-xs font-bold shadow-sm hover:bg-rose-50 active:scale-95"><i class="fa-solid fa-trash-can"></i></button>
                     </div>
@@ -501,7 +522,7 @@
                             </div>
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-droplet-slash text-[10px] text-slate-400 w-4 text-center"></i>
-                                <input type="range" id="lineOpacity" min="0" max="1" step="0.05" value="1" oninput="changeOpacity(this.value)" class="min-w-0 flex-1 accent-emerald-500 h-1.5">
+                                <input type="range" id="lineOpacity" min="0" max="1" step="0.01" value="1" oninput="changeOpacity(this.value)" class="min-w-0 flex-1 accent-emerald-500 h-1.5">
                                 <div class="flex items-center gap-1 text-[11px] font-bold text-slate-500"><input type="number" id="lineOpacityValue" min="0" max="100" value="100" oninput="changeOpacityPercent(this.value)" class="w-11 rounded-md border border-slate-200 bg-slate-50 px-1 py-1 text-right text-[11px] font-bold text-slate-700 focus:border-emerald-500 focus:outline-none"><span>%</span></div>
                             </div>
                         </div>
@@ -520,8 +541,8 @@
                 
                 <!-- 프로필 적용용 전용 버튼 -->
                 <div id="studioProfileBtns" class="hidden grid-cols-2 gap-2 mt-3 flex-shrink-0">
-                    <button onclick="saveCanvasToGallery()" class="py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-xl font-bold text-[11px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-download text-sm"></i> 보관함 저장
+                    <button onclick="cancelProfileDrawing()" class="py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-[11px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-xmark text-sm"></i> 취소
                     </button>
                     <button onclick="setProfilePicture()" class="py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-[11px] shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-id-badge text-sm"></i> 프로필로 적용
@@ -599,6 +620,10 @@
                         <div class="tomato-select-scene"><div class="tomato-preview tomato-preview-one"></div><div class="tomato-preview tomato-preview-two"></div><div class="tomato-preview tomato-preview-three"></div><div class="tomato-preview tomato-preview-four"></div><div class="tomato-preview tomato-preview-five"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-rose-700">PLAY</div></div>
                         <div class="flex items-center justify-between p-4"><div><h3 class="font-black text-slate-800">토마토 사격</h3><p class="mt-0.5 text-[11px] text-slate-500">날아가는 토마토를 눌러 맞히세요.</p><p class="mt-1 text-[10px] font-black text-rose-600">누적 <span id="tomatoCardCount">0</span>개</p></div><i class="fa-solid fa-chevron-right text-sm text-slate-300"></i></div>
                     </button>
+                    <button onclick="openBowlingGame()" class="w-full overflow-hidden rounded-2xl border border-sky-200 bg-white text-left shadow-sm active:scale-[0.99] transition-transform">
+                        <div class="bowling-select-scene"><div class="bowling-select-ball"></div><div class="bowling-select-pin" style="left:53%;--pin-scale:.75"></div><div class="bowling-select-pin" style="left:64%;--pin-scale:.96"></div><div class="bowling-select-pin" style="left:76%;--pin-scale:.68"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-sky-700">PLAY</div></div>
+                        <div class="flex items-center justify-between p-4"><div><h3 class="font-black text-slate-800">지우개 볼링</h3><p class="mt-0.5 text-[11px] text-slate-500">새총으로 공을 쏴 지우개 핀을 쓰러뜨리세요.</p><p class="mt-1 text-[10px] font-black text-sky-600">누적 <span id="bowlingCardCount">0</span>핀</p></div><i class="fa-solid fa-chevron-right text-sm text-slate-300"></i></div>
+                    </button>
                 </div>
 
                 <div id="pencilGamePanel" class="hidden rounded-2xl bg-white border border-slate-200 p-4 shadow-sm space-y-3">
@@ -660,6 +685,13 @@
                     <div class="flex items-center justify-between"><div><button onclick="closeTomatoGame()" class="mb-2 flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-600 shadow-sm active:scale-[0.97]"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button><h3 class="font-black text-slate-800">토마토 사격</h3><p class="text-[11px] text-slate-500 mt-0.5">양쪽에서 날아오는 토마토를 맞히세요.</p></div><div class="rounded-full bg-rose-100 px-3 py-1.5 text-xs font-black text-rose-700">획득 <span id="tomatoScore">0</span>P</div></div>
                     <div id="tomatoGameStage" class="tomato-game-stage rounded-xl border border-rose-200" aria-label="토마토 사격 게임판"><div class="absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black text-rose-700 shadow-sm">명중 <span id="tomatoPersonalCount">0</span>개</div></div>
                     <div class="rounded-xl border border-rose-100 bg-rose-50/60 p-3"><div class="mb-2 flex items-center justify-between"><h4 class="text-xs font-black text-rose-900"><i class="fa-solid fa-trophy text-amber-500"></i> 토마토 사격 랭킹</h4><span class="text-[10px] font-bold text-rose-600">누적 명중</span></div><ol id="tomatoRanking" class="space-y-1 text-[11px] text-slate-500"><li>랭킹을 불러오는 중입니다.</li></ol></div>
+                </div>
+
+                <div id="bowlingGamePanel" class="hidden rounded-2xl bg-white border border-sky-200 p-4 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between"><div><button onclick="closeBowlingGame()" class="mb-2 flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-600 shadow-sm active:scale-[0.97]"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button><h3 class="font-black text-slate-800">지우개 볼링</h3><p class="text-[11px] text-slate-500 mt-0.5">공을 뒤로 당겨 조준한 뒤 놓으세요. 한 프레임에 두 번 기회가 있습니다.</p></div><div class="whitespace-nowrap rounded-full bg-sky-100 px-3 py-1.5 text-xs font-black text-sky-700">획득 <span id="bowlingScore">0</span>P</div></div>
+                    <div id="bowlingGameStage" class="bowling-game-stage rounded-xl border border-sky-200" aria-label="지우개 볼링 게임판"><canvas id="bowlingThreeCanvas"></canvas><div class="absolute left-3 top-3 z-10 rounded-lg bg-slate-900/70 px-2.5 py-1.5 text-[10px] font-black text-white">남은 핀 <span id="bowlingPinsLeft">10</span></div><div class="absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black text-sky-700">누적 <span id="bowlingPersonalCount">0</span>핀</div><div id="bowlingHint" class="absolute inset-x-0 bottom-3 z-10 text-center font-black text-white"></div></div>
+                    <div class="grid grid-cols-3 gap-2 text-center"><div class="rounded-lg bg-slate-50 py-2"><p class="text-[10px] font-bold text-slate-500">핀</p><p class="text-xs font-black text-slate-700">2P</p></div><div class="rounded-lg bg-amber-50 py-2"><p class="text-[10px] font-bold text-amber-600">스트라이크</p><p class="text-xs font-black text-amber-700">+20P</p></div><div class="rounded-lg bg-sky-50 py-2"><p class="text-[10px] font-bold text-sky-600">스페어</p><p class="text-xs font-black text-sky-700">+5P</p></div></div>
+                    <div class="rounded-xl border border-sky-100 bg-sky-50/60 p-3"><div class="mb-2 flex items-center justify-between"><h4 class="text-xs font-black text-sky-900"><i class="fa-solid fa-trophy text-amber-500"></i> 지우개 볼링 랭킹</h4><span class="text-[10px] font-bold text-sky-600">누적 핀</span></div><ol id="bowlingRanking" class="space-y-1 text-[11px] text-slate-500"><li>랭킹을 불러오는 중입니다.</li></ol></div>
                 </div>
             </section>
 
@@ -752,7 +784,7 @@
                 <div id="cpPreview" class="w-12 h-12 rounded-xl shadow-inner border border-slate-200" style="background-color: #000000;"></div>
                 <div class="flex-1">
                     <p id="cpHex" class="text-sm font-bold text-slate-700 font-mono">#000000</p>
-                    <button onclick="addFavColor()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-600 px-2 py-1.5 rounded-lg mt-1 font-bold active:scale-95 transition-colors"><i class="fa-solid fa-star"></i> 즐겨찾기 추가</button>
+                    <div class="mt-1 flex gap-1.5"><button onclick="addFavColor()" class="text-[10px] bg-amber-50 hover:bg-amber-100 text-amber-600 px-2 py-1.5 rounded-lg font-bold active:scale-95 transition-colors"><i class="fa-solid fa-star"></i> 즐겨찾기 추가</button><button onclick="activateEyedropper()" class="text-[10px] bg-sky-50 hover:bg-sky-100 text-sky-600 px-2 py-1.5 rounded-lg font-bold active:scale-95 transition-colors"><i class="fa-solid fa-eye-dropper"></i> 스포이드</button></div>
                 </div>
             </div>
 
@@ -929,6 +961,7 @@
         const SIX_HOURS_MS = 6 * 60 * 60 * 1000; 
         const SEEN_AUCTIONS_KEY = 'pickle_seen_auctions_v1';
         const SETTLEMENTS_STORAGE_KEY = 'pickle_processed_settlements_v1';
+        const STUDIO_DRAFT_STORAGE_KEY = 'pickle_studio_draft_v1';
         let seenAuctionIds = new Set();
         let newAuctionIds = new Set();
         let processedSettlements = new Set();
@@ -939,8 +972,8 @@
         let homeServiceSlides = [];
         let homeServiceIndex = 0;
         let homeServiceTimer = null;
-        let homeAuctionReel = { slides: [], index: 0, timer: null };
-        let homePointReel = { slides: [], index: 0, timer: null };
+        let homeAuctionReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false };
+        let homePointReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false };
 
         // 캔버스 변수
         let currentTool = 'pen';
@@ -950,6 +983,9 @@
         let applePencilOnly = false;
         let currentLineWidth = 4;
         let isDrawing = false, startX = 0, startY = 0, snapshot = null;
+        let strokeLayer = null;
+        let strokeBaseSnapshot = null;
+        let strokePoints = [];
         let canvasZoom = 1;
         let canvasPan = { x: 0, y: 0 };
         let pinchStart = null;
@@ -967,12 +1003,14 @@
         let cucumberGame = { active: false, basketX: 0, items: [], lastSpawnAt: 0, lastFrameAt: 0, frame: null, caught: 0, caughtPieces: 0, feverProgress: 0, feverUntil: 0, pendingPoints: 0, pendingPieces: 0, flushTimer: null };
         let paintGame = { active: false, bucket: null, frame: null, lastFrameAt: 0, lastSpawnAt: 0, score: 0, pendingPoints: 0, pendingCount: 0, flushTimer: null };
         let tomatoGame = { active: false, items: [], frame: null, lastFrameAt: 0, lastSpawnAt: 0, score: 0, pendingPoints: 0, pendingCount: 0, flushTimer: null };
+        let bowlingGame = { active: false, scene: null, camera: null, renderer: null, pins: [], ball: null, frame: null, lastFrameAt: 0, roll: 1, frameNumber: 1, score: 0, knockedThisFrame: 0, isDragging: false, dragStart: null, dragCurrent: null, launchedAt: 0, resolving: false, trajectory: null, pendingPoints: 0, pendingPins: 0, flushTimer: null };
         
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
         let undoStack = [];
         let redoStack = [];
+        let draftSaveTimer = null;
 
         // 오버레이 및 도형/회전 변수
         const overlayCanvas = document.getElementById('overlayCanvas');
@@ -1086,6 +1124,16 @@
             subtitleEl.innerText = subtitle;
         }
 
+        function getRandomPaintImage() {
+            return `paint${Math.floor(Math.random() * 8) + 1}.png`;
+        }
+
+        function renderHomePaintImages() {
+            document.querySelectorAll('[data-home-paint]').forEach((image) => {
+                image.src = getRandomPaintImage();
+            });
+        }
+
         function escapeHomeServiceText(value = '') {
             return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
         }
@@ -1095,7 +1143,8 @@
                 { id: 'pencil', title: '연필 깎기', description: '연필을 깎아 포인트를 모으세요.', icon: 'fa-pencil', accent: 'amber', action: "openRecommendedGame('pencil')" },
                 { id: 'cucumber', title: '오이 받기', description: '바구니를 움직여 오이를 받아보세요.', icon: 'fa-basket-shopping', accent: 'emerald', action: "openRecommendedGame('cucumber')" },
                 { id: 'paint', title: '페인트 분류', description: '빠르게 색을 구분해 보세요.', icon: 'fa-fill-drip', accent: 'sky', action: "openRecommendedGame('paint')" },
-                { id: 'tomato', title: '토마토 사격', description: '날아가는 토마토를 정확히 맞히세요.', icon: 'fa-crosshairs', accent: 'rose', action: "openRecommendedGame('tomato')" }
+                { id: 'tomato', title: '토마토 사격', description: '날아가는 토마토를 정확히 맞히세요.', icon: 'fa-crosshairs', accent: 'rose', action: "openRecommendedGame('tomato')" },
+                { id: 'bowling', title: '지우개 볼링', description: '새총으로 공을 쏴 핀을 쓰러뜨리세요.', icon: 'fa-bowling-ball', accent: 'sky', action: "openRecommendedGame('bowling')" }
             ].sort(() => Math.random() - .5);
             const featuredAuctions = [...auctionItemsList]
                 .sort((first, second) => {
@@ -1115,7 +1164,7 @@
             const wrapper = document.createElement('div');
             wrapper.className = 'home-service-slide';
             if (slide.type === 'studio') {
-                wrapper.innerHTML = `<button onclick="switchTab('draw')" class="home-studio-scene relative flex h-full w-full items-center overflow-hidden p-5 text-left"><div class="relative z-10 ml-auto w-[53%]"><p class="text-[10px] font-black tracking-[.16em] text-emerald-800">DRAWING STUDIO</p><h4 class="mt-1 text-xl font-black text-slate-800">그림을<br>그려보세요</h4><p class="mt-2 text-[11px] font-bold leading-relaxed text-slate-600">나만의 작품을 만들고<br>경매에 출품해 보세요.</p><span class="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">스튜디오 열기 <i class="fa-solid fa-arrow-right"></i></span></div><div class="home-easel" aria-hidden="true"></div><div class="home-paint-fallback" aria-hidden="true"></div><img src="paint.png" alt="" class="home-paint-placeholder" onload="this.previousElementSibling.style.display='none';this.previousElementSibling.previousElementSibling.style.display='none'" onerror="this.style.display='none'" aria-hidden="true"></button>`;
+                wrapper.innerHTML = `<button onclick="switchTab('draw')" class="home-studio-scene relative flex h-full w-full items-center overflow-hidden p-5 text-left"><div class="relative z-10 ml-auto w-[53%]"><p class="text-[10px] font-black tracking-[.16em] text-emerald-800">DRAWING STUDIO</p><h4 class="mt-1 text-xl font-black text-slate-800">그림을<br>그려보세요</h4><p class="mt-2 text-[11px] font-bold leading-relaxed text-slate-600">나만의 작품을 만들고<br>경매에 출품해 보세요.</p><span class="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-emerald-700">스튜디오 열기 <i class="fa-solid fa-arrow-right"></i></span></div><div class="home-easel" aria-hidden="true"></div><div class="home-paint-fallback" aria-hidden="true"></div><img src="${getRandomPaintImage()}" alt="" class="home-paint-placeholder" onload="this.previousElementSibling.style.display='none';this.previousElementSibling.previousElementSibling.style.display='none'" onerror="this.style.display='none'" aria-hidden="true"></button>`;
             } else if (slide.type === 'auction') {
                 const auction = slide.auction;
                 const isHot = (auction.likes?.length || 0) >= 3 || (auction.bidsCount || 0) >= 3;
@@ -1175,14 +1224,14 @@
 
         window.openRecommendedGame = function(game) {
             switchTab('points');
-            setTimeout(() => ({ pencil: window.openPencilGame, cucumber: window.openCucumberGame, paint: window.openPaintGame, tomato: window.openTomatoGame }[game]?.()), 380);
+            setTimeout(() => ({ pencil: window.openPencilGame, cucumber: window.openCucumberGame, paint: window.openPaintGame, tomato: window.openTomatoGame, bowling: window.openBowlingGame }[game]?.()), 380);
         };
 
         function createHomeAuctionSlide(auction) {
             const wrapper = document.createElement('div');
             wrapper.className = 'home-service-slide';
             if (!auction) {
-                wrapper.innerHTML = `<button onclick="switchTab('auction')" class="flex h-full w-full flex-col items-center justify-center bg-slate-50 p-5 text-center"><i class="fa-solid fa-gavel text-3xl text-rose-300"></i><h4 class="mt-3 text-base font-black text-slate-700">진행 중인 경매를 준비 중입니다</h4><p class="mt-1 text-[11px] font-bold text-slate-400">첫 작품을 경매장에 출품해 보세요.</p></button>`;
+                wrapper.innerHTML = `<button onclick="switchTab('auction')" class="flex h-full w-full flex-col items-center justify-center bg-slate-50 p-5 text-center"><i class="fa-solid fa-gavel text-3xl text-rose-300"></i><h4 class="mt-3 text-base font-black text-slate-700">경매를 준비중입니다</h4><p class="mt-1 text-[11px] font-bold text-slate-400">첫 작품을 경매장에 출품해 보세요.</p></button>`;
                 return wrapper;
             }
             const isHot = (auction.likes?.length || 0) >= 3 || (auction.bidsCount || 0) >= 3;
@@ -1199,7 +1248,8 @@
                 pencil: `<div class="home-pencil-preview"><canvas class="home-pencil-three" data-home-pencil-preview></canvas><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-amber-700">PLAY</div></div>`,
                 cucumber: `<div class="cucumber-select-scene"><div class="cucumber-preview"></div><div class="cucumber-preview cucumber-preview-two"></div><div class="cucumber-preview cucumber-preview-three"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-emerald-700">PLAY</div></div>`,
                 paint: `<div class="paint-select-scene"><div class="paint-preview-can paint-preview-blue"></div><div class="paint-preview-can paint-preview-red"></div><div class="paint-select-belt"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-slate-600">PLAY</div></div>`,
-                tomato: `<div class="tomato-select-scene"><div class="tomato-preview tomato-preview-one"></div><div class="tomato-preview tomato-preview-two"></div><div class="tomato-preview tomato-preview-three"></div><div class="tomato-preview tomato-preview-four"></div><div class="tomato-preview tomato-preview-five"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-rose-700">PLAY</div></div>`
+                tomato: `<div class="tomato-select-scene"><div class="tomato-preview tomato-preview-one"></div><div class="tomato-preview tomato-preview-two"></div><div class="tomato-preview tomato-preview-three"></div><div class="tomato-preview tomato-preview-four"></div><div class="tomato-preview tomato-preview-five"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-rose-700">PLAY</div></div>`,
+                bowling: `<div class="bowling-select-scene"><div class="bowling-select-ball"></div><div class="bowling-select-pin" style="left:54%;--pin-scale:.72"></div><div class="bowling-select-pin" style="left:66%;--pin-scale:.92"></div><div class="bowling-select-pin" style="left:78%;--pin-scale:.64"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-sky-700">PLAY</div></div>`
             };
             wrapper.innerHTML = `<button onclick="openRecommendedGame('${game.id}')" class="h-full w-full overflow-hidden rounded-2xl border ${game.border} bg-white text-left"><div class="relative">${scenes[game.id]}</div><div class="flex items-center justify-between p-3"><div><h4 class="font-black text-slate-800">${game.title}</h4><p class="mt-0.5 text-[11px] text-slate-500">${game.description}</p></div><i class="fa-solid fa-chevron-right text-sm text-slate-300"></i></div></button>`;
             return wrapper;
@@ -1210,6 +1260,8 @@
             const dots = document.getElementById(dotsId);
             if (!track || !dots || slides.length === 0) return;
             clearInterval(reel.timer);
+            clearTimeout(reel.transitionTimer);
+            reel.isAnimating = false;
             reel.slides = slides;
             reel.index = 0;
             track.replaceChildren(...slides.map(createSlide), createSlide(slides[0]));
@@ -1246,8 +1298,11 @@
             track.style.transform = `translateX(-${reel.index * 100}%)`;
             const displayIndex = ((reel.index % total) + total) % total;
             document.querySelectorAll(`#${dotsId} .home-reel-dot`).forEach((dot, index) => dot.classList.toggle('is-active', index === displayIndex));
-            track.addEventListener('transitionend', (event) => {
-                if (event.target !== track || event.propertyName !== 'transform') return;
+            let completed = false;
+            const completeMove = () => {
+                if (completed) return;
+                completed = true;
+                clearTimeout(reel.transitionTimer);
                 if (reel.index === total) {
                     track.classList.add('is-resetting');
                     track.style.transform = 'translateX(0)';
@@ -1256,7 +1311,11 @@
                     track.classList.remove('is-resetting');
                 }
                 reel.isAnimating = false;
+            };
+            track.addEventListener('transitionend', (event) => {
+                if (event.target === track && event.propertyName === 'transform') completeMove();
             }, { once: true });
+            reel.transitionTimer = setTimeout(completeMove, 700);
         }
 
         function enableHomeReelSwipe(reel, trackId, dotsId) {
@@ -1285,7 +1344,7 @@
             const finishSwipe = (event) => {
                 if (event.pointerId !== activePointerId) return;
                 const distance = event.clientX - startX;
-                if (didSwipe && Math.abs(distance) > 42) {
+                if (didSwipe && Math.abs(distance) > 24) {
                     moveHomeLoopingReel(reel, trackId, dotsId, distance < 0 ? 1 : -1);
                     track.dataset.suppressClick = 'true';
                 }
@@ -1314,7 +1373,8 @@
                 { id: 'pencil', title: '연필 깎기', description: '연필을 깎아 포인트를 모으세요.', border: 'border-amber-200' },
                 { id: 'cucumber', title: '오이 받기', description: '바구니를 움직여 오이를 받아보세요.', border: 'border-emerald-200' },
                 { id: 'paint', title: '페인트 분류', description: '색상에 맞는 버튼으로 분류하세요.', border: 'border-slate-200' },
-                { id: 'tomato', title: '토마토 사격', description: '날아가는 토마토를 맞히세요.', border: 'border-rose-200' }
+                { id: 'tomato', title: '토마토 사격', description: '날아가는 토마토를 맞히세요.', border: 'border-rose-200' },
+                { id: 'bowling', title: '지우개 볼링', description: '새총으로 공을 쏴 핀을 쓰러뜨리세요.', border: 'border-sky-200' }
             ].sort(() => Math.random() - .5);
             renderHomeLoopingReel(homeAuctionReel, 'homeAuctionTrack', 'homeAuctionDots', featuredAuctions.length ? featuredAuctions : [null], createHomeAuctionSlide);
             renderHomeLoopingReel(homePointReel, 'homePointTrack', 'homePointDots', games, createHomePointSlide);
@@ -1380,8 +1440,10 @@
             seenAuctionIds = loadSeenAuctionIds();
             processedSettlements = loadProcessedSettlements();
             renderHomeHeroCopy();
+            renderHomePaintImages();
             renderHomeLobbyReels();
             initCanvas();
+            enableTabSwipe();
             setupImageTransformEvents();
             renderFavColors();
             initColorPicker(); 
@@ -1435,7 +1497,7 @@
                             }
                         } else {
                             const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
-                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', checkInDates: [], weeklyBonusClaimedWeek: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0, cucumberCaughtCount: 0, paintSortedCount: 0, tomatoShotCount: 0, favoriteColors: [...DEFAULT_FAVORITE_COLORS] };
+                            const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', checkInDates: [], weeklyBonusClaimedWeek: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0, cucumberCaughtCount: 0, paintSortedCount: 0, tomatoShotCount: 0, bowlingKnockedCount: 0, favoriteColors: [...DEFAULT_FAVORITE_COLORS] };
                             setDoc(userRef, newProfile);
                             pendingSignupNickname = '';
                         }
@@ -1789,6 +1851,15 @@
             document.getElementById('studioProfileBtns').style.display = 'grid';
             document.getElementById('studioProfileBtns').classList.remove('hidden');
             showToast('나만의 멋진 프로필 사진을 캔버스에 직접 그려보세요!');
+        };
+
+        window.cancelProfileDrawing = function() {
+            clearCanvas();
+            document.getElementById('studioProfileBtns').style.display = 'none';
+            document.getElementById('studioProfileBtns').classList.add('hidden');
+            document.getElementById('studioNormalBtns').style.display = 'flex';
+            switchTab('settings');
+            showToast('프로필 그림 편집을 취소했습니다.');
         };
 
         window.setProfilePicture = async function() {
@@ -2509,14 +2580,39 @@
             if (tabName !== 'points') resetPointGamePanels();
         }
 
+        function enableTabSwipe() {
+            const main = document.getElementById('appMain');
+            if (!main || main.dataset.tabSwipeBound) return;
+            const blockedSelector = 'canvas, input, textarea, select, button, a, [contenteditable="true"], .home-reel-track, .game-stage, .pencil-game-stage, .bowling-game-stage, .paint-game-stage, .tomato-game-stage';
+            const tabs = ['home', 'draw', 'auction', 'points', 'gallery', 'settings'];
+            let swipeStart = null;
+            main.addEventListener('pointerdown', (event) => {
+                if (event.pointerType !== 'touch' || event.target.closest(blockedSelector)) return;
+                swipeStart = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+            }, { passive: true });
+            main.addEventListener('pointerup', (event) => {
+                if (!swipeStart || swipeStart.pointerId !== event.pointerId) return;
+                const distanceX = event.clientX - swipeStart.x;
+                const distanceY = event.clientY - swipeStart.y;
+                swipeStart = null;
+                if (Math.abs(distanceX) < 72 || Math.abs(distanceX) < Math.abs(distanceY) * 1.4) return;
+                const nextIndex = tabs.indexOf(activeTabName) + (distanceX < 0 ? 1 : -1);
+                if (nextIndex >= 0 && nextIndex < tabs.length) switchTab(tabs[nextIndex]);
+            }, { passive: true });
+            main.addEventListener('pointercancel', () => { swipeStart = null; }, { passive: true });
+            main.dataset.tabSwipeBound = 'true';
+        }
+
         function resetPointGamePanels() {
             stopCucumberGame();
             stopPaintGame();
             stopTomatoGame();
+            stopBowlingGame();
             document.getElementById('pencilGamePanel').classList.add('hidden');
             document.getElementById('cucumberGamePanel').classList.add('hidden');
             document.getElementById('paintGamePanel').classList.add('hidden');
             document.getElementById('tomatoGamePanel').classList.add('hidden');
+            document.getElementById('bowlingGamePanel').classList.add('hidden');
             document.getElementById('pointGameSelector').classList.remove('hidden');
         }
 
@@ -2576,6 +2672,20 @@
         window.closeTomatoGame = function() {
             stopTomatoGame();
             document.getElementById('tomatoGamePanel').classList.add('hidden');
+            document.getElementById('pointGameSelector').classList.remove('hidden');
+        };
+
+        window.openBowlingGame = function() {
+            document.getElementById('pointGameSelector').classList.add('hidden');
+            ['pencilGamePanel', 'cucumberGamePanel', 'paintGamePanel', 'tomatoGamePanel'].forEach((id) => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('bowlingGamePanel').classList.remove('hidden');
+            startBowlingGame();
+            loadMiniGameRanking('bowling');
+        };
+
+        window.closeBowlingGame = function() {
+            stopBowlingGame();
+            document.getElementById('bowlingGamePanel').classList.add('hidden');
             document.getElementById('pointGameSelector').classList.remove('hidden');
         };
 
@@ -3023,6 +3133,347 @@
             if (tomatoGame.pendingPoints > 0) flushTomatoRewards();
         }
 
+        function createBowlingLabelTexture(label, background, foreground) {
+            const textureCanvas = document.createElement('canvas');
+            textureCanvas.width = 256;
+            textureCanvas.height = 128;
+            const textureContext = textureCanvas.getContext('2d');
+            textureContext.fillStyle = background;
+            textureContext.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+            textureContext.fillStyle = foreground;
+            textureContext.font = '900 40px sans-serif';
+            textureContext.textAlign = 'center';
+            textureContext.textBaseline = 'middle';
+            textureContext.fillText(label, textureCanvas.width / 2, textureCanvas.height / 2);
+            const texture = new THREE.CanvasTexture(textureCanvas);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            return texture;
+        }
+
+        function createBowlingPin() {
+            const pin = new THREE.Group();
+            const rubber = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: .58 });
+            const band = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: .42 });
+            const top = new THREE.Mesh(new THREE.BoxGeometry(.42, .36, .30), rubber);
+            top.position.y = .34;
+            const center = new THREE.Mesh(new THREE.BoxGeometry(.46, .42, .32), band);
+            center.position.y = -.02;
+            const bottom = new THREE.Mesh(new THREE.BoxGeometry(.42, .20, .30), rubber);
+            bottom.position.y = -.30;
+            const label = new THREE.Mesh(new THREE.PlaneGeometry(.36, .18), new THREE.MeshBasicMaterial({ map: createBowlingLabelTexture('P!CKLE', '#ffffff', '#2563eb') }));
+            label.position.set(0, -.01, .166);
+            [top, center, bottom, label].forEach((part) => { part.castShadow = true; part.receiveShadow = true; pin.add(part); });
+            return pin;
+        }
+
+        function createBowlingBall() {
+            const palette = [0x38bdf8, 0xf472b6, 0xfacc15, 0x34d399, 0xa78bfa, 0xfb7185];
+            const ball = new THREE.Mesh(new THREE.SphereGeometry(.34, 28, 20), new THREE.MeshStandardMaterial({ color: palette[Math.floor(Math.random() * palette.length)], roughness: .24, metalness: .16 }));
+            ball.castShadow = true;
+            ball.position.set(0, .34, 2.45);
+            ball.userData.velocity = new THREE.Vector3();
+            return ball;
+        }
+
+        function initBowlingScene() {
+            const canvas = document.getElementById('bowlingThreeCanvas');
+            if (!canvas || !window.THREE) return false;
+            if (bowlingGame.renderer) return true;
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(43, 1, .1, 100);
+            camera.position.set(0, 4.45, 8.7);
+            camera.lookAt(0, .35, -1.5);
+            let renderer;
+            try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); } catch (error) { console.warn('Bowling renderer unavailable', error); return false; }
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            scene.add(new THREE.HemisphereLight(0xfff7df, 0x4b5563, 2.5));
+            const light = new THREE.DirectionalLight(0xffffff, 3.4);
+            light.position.set(-4, 7, 5);
+            light.castShadow = true;
+            scene.add(light);
+            const ceiling = new THREE.Mesh(new THREE.BoxGeometry(7.8, .16, 13), new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: .8 }));
+            ceiling.position.set(0, 4.2, -.65);
+            scene.add(ceiling);
+            [-2.8, 0, 2.8].forEach((x) => {
+                const fixture = new THREE.Mesh(new THREE.BoxGeometry(1.3, .08, .42), new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffd66b, emissiveIntensity: 1.1 }));
+                fixture.position.set(x, 3.86, -1.4);
+                scene.add(fixture);
+            });
+            const lane = new THREE.Mesh(new THREE.BoxGeometry(4.8, .18, 13), new THREE.MeshStandardMaterial({ color: 0xd8a970, roughness: .42, metalness: .06 }));
+            lane.position.set(0, -.1, -.65);
+            lane.receiveShadow = true;
+            scene.add(lane);
+            const laneMarkMaterial = new THREE.MeshStandardMaterial({ color: 0xfef3c7, emissive: 0x6b4a23, emissiveIntensity: .25 });
+            [-.78, .78].forEach((x) => {
+                const laneMark = new THREE.Mesh(new THREE.BoxGeometry(.045, .012, 8.6), laneMarkMaterial);
+                laneMark.position.set(x, .005, -.7);
+                scene.add(laneMark);
+            });
+            const back = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.25, .25), new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: .36, metalness: .12 }));
+            back.position.set(0, 1, -6.7);
+            scene.add(back);
+            const backStripe = new THREE.Mesh(new THREE.BoxGeometry(5.28, .48, .04), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: .3 }));
+            backStripe.position.set(0, .38, -6.55);
+            scene.add(backStripe);
+            [-2.3, 2.3].forEach((x) => { const pillar = new THREE.Mesh(new THREE.BoxGeometry(.22, 2.4, .38), new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: .25, roughness: .4 })); pillar.position.set(x, 1, -6.5); scene.add(pillar); });
+            const trajectory = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0x22c55e, dashSize: .14, gapSize: .1, transparent: true, opacity: .9 }));
+            trajectory.visible = false;
+            scene.add(trajectory);
+            bowlingGame.scene = scene;
+            bowlingGame.camera = camera;
+            bowlingGame.renderer = renderer;
+            bowlingGame.trajectory = trajectory;
+            const stage = document.getElementById('bowlingGameStage');
+            if (!stage.dataset.bowlingBound) {
+                stage.addEventListener('pointerdown', beginBowlingPull);
+                stage.addEventListener('pointermove', updateBowlingPull);
+                stage.addEventListener('pointerup', releaseBowlingBall);
+                stage.addEventListener('pointercancel', releaseBowlingBall);
+                stage.dataset.bowlingBound = 'true';
+            }
+            return true;
+        }
+
+        function resizeBowlingScene() {
+            const canvas = document.getElementById('bowlingThreeCanvas');
+            if (!bowlingGame.renderer || !canvas?.clientWidth) return;
+            bowlingGame.renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+            bowlingGame.camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            bowlingGame.camera.updateProjectionMatrix();
+        }
+
+        function resetBowlingPins() {
+            bowlingGame.pins.forEach((pin) => bowlingGame.scene.remove(pin.mesh));
+            bowlingGame.pins = [];
+            const rows = [[0], [-.32, .32], [-.64, 0, .64], [-.96, -.32, .32, .96]];
+            rows.forEach((row, rowIndex) => row.forEach((x) => {
+                const mesh = createBowlingPin();
+                mesh.position.set(x + (Math.random() - .5) * .035, .4, -4.25 - rowIndex * .54);
+                bowlingGame.scene.add(mesh);
+                bowlingGame.pins.push({ mesh, standing: true, counted: false, mass: .75, velocity: new THREE.Vector3(), angular: new THREE.Vector3() });
+            }));
+            bowlingGame.knockedThisFrame = 0;
+            document.getElementById('bowlingPinsLeft').innerText = '10';
+        }
+
+        function resetBowlingBall() {
+            if (bowlingGame.ball) bowlingGame.scene.remove(bowlingGame.ball);
+            bowlingGame.ball = createBowlingBall();
+            bowlingGame.scene.add(bowlingGame.ball);
+            bowlingGame.launchedAt = 0;
+            bowlingGame.resolving = false;
+            document.getElementById('bowlingHint').innerText = '';
+            document.getElementById('bowlingHint').classList.remove('is-result', 'is-exiting', 'is-strike');
+        }
+
+        function beginBowlingPull(event) {
+            if (!bowlingGame.active || bowlingGame.launchedAt || bowlingGame.resolving) return;
+            event.preventDefault();
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+            bowlingGame.isDragging = true;
+            bowlingGame.dragStart = { x: event.clientX, y: event.clientY };
+            bowlingGame.dragCurrent = bowlingGame.dragStart;
+        }
+
+        function updateBowlingPull(event) {
+            if (!bowlingGame.isDragging) return;
+            const stage = document.getElementById('bowlingGameStage');
+            const pullX = Math.max(-1.7, Math.min(1.7, (event.clientX - bowlingGame.dragStart.x) / stage.clientWidth * 4.5));
+            const pullY = Math.max(0, Math.min(1, (event.clientY - bowlingGame.dragStart.y) / stage.clientHeight));
+            bowlingGame.dragCurrent = { pullX, pullY };
+            bowlingGame.ball.position.x = pullX * .58;
+            bowlingGame.ball.position.z = 2.45 + pullY * .48;
+            const strength = 9 + pullY * 8;
+            const trajectoryColor = strength < 12 ? 0x22c55e : strength < 15 ? 0xf59e0b : 0xf43f5e;
+            bowlingGame.trajectory.material.color.setHex(trajectoryColor);
+            bowlingGame.trajectory.material.opacity = .62 + pullY * .35;
+            const target = new THREE.Vector3(pullX * -1.25, .34, -5.9);
+            bowlingGame.trajectory.geometry.setFromPoints([bowlingGame.ball.position.clone(), target]);
+            bowlingGame.trajectory.computeLineDistances();
+            bowlingGame.trajectory.visible = true;
+        }
+
+        function releaseBowlingBall(event) {
+            if (!bowlingGame.isDragging) return;
+            bowlingGame.isDragging = false;
+            const pull = bowlingGame.dragCurrent;
+            bowlingGame.trajectory.visible = false;
+            if (!pull || pull.pullY < .08) { resetBowlingBall(); return; }
+            const aimJitter = (Math.random() - .5) * .16;
+            bowlingGame.ball.userData.velocity.set(-pull.pullX * 2.55 + aimJitter, 0, -(9 + pull.pullY * 8));
+            bowlingGame.launchedAt = performance.now();
+        }
+
+        function knockBowlingPin(pin, force) {
+            if (!pin.standing || force.length() < 1.15) return;
+            pin.standing = false;
+            pin.velocity.copy(force);
+            pin.velocity.multiplyScalar(1 / pin.mass);
+            pin.velocity.y = Math.min(11, Math.max(3.5, force.length() * 2.4));
+            const lever = new THREE.Vector3(0, -.28, 0);
+            pin.angular.crossVectors(force, lever).multiplyScalar(7.2 / pin.mass);
+            pin.angular.y += (Math.random() - .5) * .5;
+        }
+
+        function resolveBowlingRoll() {
+            if (bowlingGame.resolving) return;
+            bowlingGame.resolving = true;
+            const knocked = bowlingGame.pins.filter((pin) => pin.counted).length - bowlingGame.knockedThisFrame;
+            bowlingGame.knockedThisFrame += Math.max(0, knocked);
+            const allDown = bowlingGame.knockedThisFrame === 10;
+            const isStrike = bowlingGame.roll === 1 && allDown;
+            const isSpare = bowlingGame.roll === 2 && allDown;
+            const reward = Math.max(0, knocked) * 2 + (isStrike ? 20 : 0) + (isSpare ? 5 : 0);
+            bowlingGame.score += reward;
+            document.getElementById('bowlingScore').innerText = bowlingGame.score;
+            if (reward > 0) awardBowlingReward(reward, Math.max(0, knocked));
+            if (isStrike || isSpare) {
+                const hint = document.getElementById('bowlingHint');
+                hint.innerText = isStrike ? 'STRIKE!' : 'SPARE!';
+                hint.classList.add('is-result');
+                hint.classList.toggle('is-strike', isStrike);
+                setTimeout(() => hint.classList.add('is-exiting'), 640);
+            }
+            setTimeout(() => {
+                if (!bowlingGame.active) return;
+                if (isStrike || allDown || bowlingGame.roll === 2) {
+                    bowlingGame.frameNumber += 1;
+                    bowlingGame.roll = 1;
+                    resetBowlingPins();
+                } else {
+                    bowlingGame.roll = 2;
+                }
+                resetBowlingBall();
+            }, 950);
+        }
+
+        async function awardBowlingReward(points, pins) {
+            const previousPoints = userData.points || 0;
+            userData.points = previousPoints + points;
+            userData.bowlingKnockedCount = (userData.bowlingKnockedCount || 0) + pins;
+            animatePointGain(previousPoints, userData.points);
+            renderMiniGameStats();
+            if (!currentUser?.uid) return;
+            try {
+                const { db, appId, doc, updateDoc } = window.FB;
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { points: userData.points, bowlingKnockedCount: userData.bowlingKnockedCount });
+            } catch (error) { console.error('Bowling reward error', error); }
+        }
+
+        function animateBowlingGame(timestamp) {
+            if (!bowlingGame.active) return;
+            const delta = Math.min(.035, (timestamp - (bowlingGame.lastFrameAt || timestamp)) / 1000);
+            bowlingGame.lastFrameAt = timestamp;
+            resizeBowlingScene();
+            const ball = bowlingGame.ball;
+            if (ball?.userData.velocity.lengthSq() > .001) {
+                const stepCount = Math.max(1, Math.ceil(ball.userData.velocity.length() * delta / .08));
+                const stepDelta = delta / stepCount;
+                for (let step = 0; step < stepCount; step += 1) {
+                    ball.position.addScaledVector(ball.userData.velocity, stepDelta);
+                    if (Math.abs(ball.position.x) > 2.4) {
+                        ball.userData.outOfBounds = true;
+                        break;
+                    }
+                    bowlingGame.pins.forEach((pin) => {
+                        const offset = pin.mesh.position.clone().sub(ball.position);
+                        offset.y = 0;
+                        if (offset.length() < .56) {
+                            const collisionNormal = offset.normalize();
+                            ball.position.copy(pin.mesh.position).addScaledVector(collisionNormal, -.56);
+                            ball.position.y = .34;
+                            const impactSpeed = ball.userData.velocity.length();
+                            if (pin.standing) {
+                                knockBowlingPin(pin, collisionNormal.multiplyScalar(impactSpeed * .46));
+                            } else {
+                                pin.velocity.addScaledVector(collisionNormal, impactSpeed * .3 / pin.mass);
+                                pin.velocity.y += Math.min(1.2, impactSpeed * .1);
+                                pin.angular.x += collisionNormal.z * impactSpeed * 1.5;
+                                pin.angular.z -= collisionNormal.x * impactSpeed * 1.5;
+                            }
+                            ball.userData.velocity.multiplyScalar(pin.standing ? .68 : .74);
+                        }
+                    });
+                }
+                if (ball.userData.outOfBounds) {
+                    resetBowlingBall();
+                } else {
+                    ball.rotation.x -= ball.userData.velocity.z * delta / .34;
+                    ball.userData.velocity.multiplyScalar(Math.pow(.34, delta));
+                }
+            }
+            bowlingGame.pins.forEach((pin) => {
+                if (pin.standing) return;
+                pin.velocity.y -= 20 * delta;
+                pin.mesh.position.addScaledVector(pin.velocity, delta);
+                const horizontalDrag = Math.exp(-1.2 * delta);
+                pin.velocity.x *= horizontalDrag;
+                pin.velocity.z *= horizontalDrag;
+                pin.mesh.rotation.x += pin.angular.x * delta;
+                pin.mesh.rotation.y += pin.angular.y * delta;
+                pin.mesh.rotation.z += pin.angular.z * delta;
+                pin.angular.multiplyScalar(Math.exp(-2 * delta));
+                if (pin.mesh.position.y < .15) {
+                    pin.mesh.position.y = .15;
+                    pin.velocity.y = pin.velocity.y < -.55 ? -pin.velocity.y * .12 : 0;
+                    const floorFriction = Math.exp(-9 * delta);
+                    pin.velocity.x *= floorFriction;
+                    pin.velocity.z *= floorFriction;
+                    pin.angular.multiplyScalar(Math.exp(-12 * delta));
+                    if (Math.hypot(pin.velocity.x, pin.velocity.z) < .06) pin.velocity.setX(0).setZ(0);
+                    if (pin.angular.length() < .08) pin.angular.set(0, 0, 0);
+                }
+                if (!pin.counted && (Math.abs(pin.mesh.rotation.x) > .45 || Math.abs(pin.mesh.rotation.z) > .45)) {
+                    pin.counted = true;
+                    document.getElementById('bowlingPinsLeft').innerText = String(10 - bowlingGame.pins.filter((entry) => entry.counted).length);
+                }
+            });
+            bowlingGame.pins.filter((pin) => !pin.standing).forEach((fallenPin) => {
+                bowlingGame.pins.filter((standingPin) => standingPin.standing).forEach((standingPin) => {
+                    const offset = standingPin.mesh.position.clone().sub(fallenPin.mesh.position);
+                    offset.y = 0;
+                    const impact = fallenPin.velocity.length();
+                    if (impact > .9 && offset.length() < .5) {
+                        knockBowlingPin(standingPin, offset.normalize().multiplyScalar(Math.max(.65, impact * .36)));
+                        fallenPin.velocity.multiplyScalar(.68);
+                    }
+                });
+            });
+            if (bowlingGame.launchedAt && (timestamp - bowlingGame.launchedAt > 2550 || ball.position.z < -6.4 || ball.userData.velocity.length() < .25)) resolveBowlingRoll();
+            bowlingGame.renderer.render(bowlingGame.scene, bowlingGame.camera);
+            bowlingGame.frame = requestAnimationFrame(animateBowlingGame);
+        }
+
+        function startBowlingGame() {
+            if (!initBowlingScene()) return showToast('3D 게임을 시작할 수 없습니다.');
+            stopBowlingGame(false);
+            bowlingGame.active = true;
+            bowlingGame.score = 0;
+            bowlingGame.frameNumber = 1;
+            bowlingGame.roll = 1;
+            document.getElementById('bowlingScore').innerText = '0';
+            resetBowlingPins();
+            resetBowlingBall();
+            bowlingGame.lastFrameAt = 0;
+            bowlingGame.frame = requestAnimationFrame(animateBowlingGame);
+        }
+
+        function stopBowlingGame(clearScene = true) {
+            if (bowlingGame.frame) cancelAnimationFrame(bowlingGame.frame);
+            bowlingGame.frame = null;
+            bowlingGame.active = false;
+            bowlingGame.isDragging = false;
+            if (bowlingGame.trajectory) bowlingGame.trajectory.visible = false;
+            if (clearScene && bowlingGame.scene) {
+                bowlingGame.pins.forEach((pin) => bowlingGame.scene.remove(pin.mesh));
+                if (bowlingGame.ball) bowlingGame.scene.remove(bowlingGame.ball);
+                bowlingGame.pins = [];
+                bowlingGame.ball = null;
+            }
+        }
+
         function renderMiniGameStats() {
             const pencilCardCount = document.getElementById('pencilCardCount');
             const cucumberCardCount = document.getElementById('cucumberCardCount');
@@ -3031,6 +3482,8 @@
             const paintPersonalCount = document.getElementById('paintPersonalCount');
             const tomatoCardCount = document.getElementById('tomatoCardCount');
             const tomatoPersonalCount = document.getElementById('tomatoPersonalCount');
+            const bowlingCardCount = document.getElementById('bowlingCardCount');
+            const bowlingPersonalCount = document.getElementById('bowlingPersonalCount');
             if (pencilCardCount) pencilCardCount.innerText = (userData.pencilSharpenedCount || 0).toLocaleString();
             if (cucumberCardCount) cucumberCardCount.innerText = (userData.cucumberCaughtCount || 0).toLocaleString();
             if (cucumberPersonalCount) cucumberPersonalCount.innerText = (userData.cucumberCaughtCount || 0).toLocaleString();
@@ -3038,14 +3491,16 @@
             if (paintPersonalCount) paintPersonalCount.innerText = (userData.paintSortedCount || 0).toLocaleString();
             if (tomatoCardCount) tomatoCardCount.innerText = (userData.tomatoShotCount || 0).toLocaleString();
             if (tomatoPersonalCount) tomatoPersonalCount.innerText = (userData.tomatoShotCount || 0).toLocaleString();
+            if (bowlingCardCount) bowlingCardCount.innerText = (userData.bowlingKnockedCount || 0).toLocaleString();
+            if (bowlingPersonalCount) bowlingPersonalCount.innerText = (userData.bowlingKnockedCount || 0).toLocaleString();
         }
 
         async function loadMiniGameRanking(game) {
-            const list = document.getElementById(game === 'pencil' ? 'pencilRanking' : game === 'cucumber' ? 'cucumberRanking' : game === 'paint' ? 'paintRanking' : 'tomatoRanking');
+            const list = document.getElementById(game === 'pencil' ? 'pencilRanking' : game === 'cucumber' ? 'cucumberRanking' : game === 'paint' ? 'paintRanking' : game === 'tomato' ? 'tomatoRanking' : 'bowlingRanking');
             if (!list || !window.FB) return;
             list.innerHTML = '<li>랭킹을 불러오는 중입니다.</li>';
-            const scoreKey = game === 'pencil' ? 'pencilSharpenedCount' : game === 'cucumber' ? 'cucumberCaughtCount' : game === 'paint' ? 'paintSortedCount' : 'tomatoShotCount';
-            const unit = game === 'pencil' ? '자루' : game === 'cucumber' ? '조각' : '개';
+            const scoreKey = game === 'pencil' ? 'pencilSharpenedCount' : game === 'cucumber' ? 'cucumberCaughtCount' : game === 'paint' ? 'paintSortedCount' : game === 'tomato' ? 'tomatoShotCount' : 'bowlingKnockedCount';
+            const unit = game === 'pencil' ? '자루' : game === 'cucumber' ? '조각' : game === 'bowling' ? '핀' : '개';
             try {
                 const { db, collectionGroup, getDocs } = window.FB;
                 const profiles = await getDocs(collectionGroup(db, 'profile'));
@@ -3602,7 +4057,9 @@
 
             const scaleX = cpCanvas.width / rect.width;
             const scaleY = cpCanvas.height / rect.height;
-            const imgData = cpCtx.getImageData(x * scaleX, y * scaleY, 1, 1).data;
+            const pixelX = Math.min(cpCanvas.width - 1, Math.max(0, Math.floor(x * scaleX)));
+            const pixelY = Math.min(cpCanvas.height - 1, Math.max(0, Math.floor(y * scaleY)));
+            const imgData = cpCtx.getImageData(pixelX, pixelY, 1, 1).data;
             
             let hex = "#" + (1 << 24 | imgData[0] << 16 | imgData[1] << 8 | imgData[2]).toString(16).slice(1);
             document.getElementById('cpHex').innerText = hex;
@@ -3624,10 +4081,12 @@
             drawColorArea();
             
             const cThumb = document.getElementById('colorThumb');
-            let thumbXPercent = parseFloat(cThumb.style.left) / 100 || 1;
-            let thumbYPercent = parseFloat(cThumb.style.top) / 100 || 0;
+            let thumbXPercent = Number.isFinite(parseFloat(cThumb.style.left)) ? parseFloat(cThumb.style.left) / 100 : 1;
+            let thumbYPercent = Number.isFinite(parseFloat(cThumb.style.top)) ? parseFloat(cThumb.style.top) / 100 : 0;
             
-            const imgData = cpCtx.getImageData(thumbXPercent * cpCanvas.width, thumbYPercent * cpCanvas.height, 1, 1).data;
+            const pixelX = Math.min(cpCanvas.width - 1, Math.max(0, Math.floor(thumbXPercent * cpCanvas.width)));
+            const pixelY = Math.min(cpCanvas.height - 1, Math.max(0, Math.floor(thumbYPercent * cpCanvas.height)));
+            const imgData = cpCtx.getImageData(pixelX, pixelY, 1, 1).data;
             let hex = "#" + (1 << 24 | imgData[0] << 16 | imgData[1] << 8 | imgData[2]).toString(16).slice(1);
             
             document.getElementById('cpHex').innerText = hex;
@@ -3675,6 +4134,32 @@
             document.getElementById('cpPreview').style.backgroundColor = hex;
         };
 
+        function setPickerColor(hex) {
+            const normalizedHex = String(hex).toLowerCase();
+            document.getElementById('cpHex').innerText = normalizedHex;
+            document.getElementById('cpPreview').style.backgroundColor = normalizedHex;
+            document.getElementById('colorThumb').style.backgroundColor = normalizedHex;
+        }
+
+        window.activateEyedropper = async function() {
+            closeColorPicker();
+            showToast('작업 캔버스에서 원하는 색을 눌러주세요.');
+            const pickFromCanvas = (event) => {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                const position = getCoordinates(event);
+                const pixel = ctx.getImageData(Math.floor(position.x), Math.floor(position.y), 1, 1).data;
+                const hex = `#${[pixel[0], pixel[1], pixel[2]].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+                setPickerColor(hex);
+                baseColor = hex;
+                currentColor = hexToRgbaStr(baseColor, currentOpacity);
+                document.getElementById('toolbarColorPreview').style.backgroundColor = hex;
+                canvas.removeEventListener('pointerdown', pickFromCanvas, true);
+                showToast('색상을 가져왔습니다.');
+            };
+            canvas.addEventListener('pointerdown', pickFromCanvas, true);
+        };
+
         window.applyColorPicker = function() {
             baseColor = document.getElementById('cpHex').innerText;
             currentColor = hexToRgbaStr(baseColor, currentOpacity);
@@ -3694,8 +4179,7 @@
         }
 
         function initCanvas() {
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            saveState(); 
+            restoreCanvasDraft();
 
             canvas.addEventListener('pointerdown', (e) => {
                 if (e.pointerType === 'touch') {
@@ -3746,6 +4230,8 @@
             canvas.addEventListener('pointerup', endCanvasPointer);
             canvas.addEventListener('pointercancel', endCanvasPointer);
             canvas.addEventListener('pointerleave', hideBrushCursor);
+            canvas.addEventListener('contextmenu', (event) => event.preventDefault());
+            initStudioShortcuts();
         }
 
         function cancelTouchGestureDrawing() {
@@ -3810,15 +4296,78 @@
             }
         }
 
-        function saveState() {
+        function updateStudioControls() {
+            const undoButton = document.getElementById('undoButton');
+            const redoButton = document.getElementById('redoButton');
+            if (undoButton) {
+                undoButton.disabled = undoStack.length <= 1;
+                undoButton.classList.toggle('opacity-40', undoButton.disabled);
+            }
+            if (redoButton) {
+                redoButton.disabled = redoStack.length === 0;
+                redoButton.classList.toggle('opacity-40', redoButton.disabled);
+            }
+        }
+
+        function updateStudioStatus(message) {
+            const status = document.getElementById('studioStatus');
+            if (status) status.innerText = message;
+        }
+
+        function scheduleCanvasDraftSave() {
+            clearTimeout(draftSaveTimer);
+            draftSaveTimer = setTimeout(() => {
+                try {
+                    localStorage.setItem(STUDIO_DRAFT_STORAGE_KEY, canvas.toDataURL('image/png'));
+                    updateStudioStatus('이 기기에 자동 저장됨');
+                } catch (error) {
+                    console.warn('Studio draft save error', error);
+                }
+            }, 450);
+        }
+
+        function restoreCanvasDraft() {
+            const savedDraft = localStorage.getItem(STUDIO_DRAFT_STORAGE_KEY);
+            if (!savedDraft) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                saveState(false);
+                updateStudioStatus('새 캔버스');
+                return;
+            }
+            const draftImage = new Image();
+            draftImage.onload = () => {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(draftImage, 0, 0, canvas.width, canvas.height);
+                undoStack = [];
+                redoStack = [];
+                saveState(false);
+                updateStudioStatus('이전 작업을 불러왔습니다');
+            };
+            draftImage.onerror = () => {
+                localStorage.removeItem(STUDIO_DRAFT_STORAGE_KEY);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                saveState(false);
+                updateStudioStatus('새 캔버스');
+            };
+            draftImage.src = savedDraft;
+        }
+
+        function saveState(shouldSaveDraft = true) {
             undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
             redoStack = []; 
             if (undoStack.length > 20) undoStack.shift(); 
+            updateStudioControls();
+            if (shouldSaveDraft) scheduleCanvasDraftSave();
         }
         window.undo = function() {
             if (undoStack.length > 1) {
                 redoStack.push(undoStack.pop());
                 ctx.putImageData(undoStack[undoStack.length - 1], 0, 0);
+                updateStudioControls();
+                scheduleCanvasDraftSave();
             } else { showToast("더 이상 되돌릴 수 없습니다."); }
         };
         window.redo = function() {
@@ -3826,6 +4375,8 @@
                 const state = redoStack.pop();
                 undoStack.push(state);
                 ctx.putImageData(state, 0, 0);
+                updateStudioControls();
+                scheduleCanvasDraftSave();
             }
         };
         
@@ -3839,7 +4390,10 @@
             ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height); 
             undoStack = [];
             redoStack = [];
-            saveState(); 
+            clearTimeout(draftSaveTimer);
+            localStorage.removeItem(STUDIO_DRAFT_STORAGE_KEY);
+            saveState(false);
+            updateStudioStatus('새 캔버스');
         }
 
         function getCoordinates(e) {
@@ -3886,7 +4440,8 @@
             
             const rgbaMatch = fillColorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
             if(!rgbaMatch) return;
-            const targetColor = [parseInt(rgbaMatch[1]), parseInt(rgbaMatch[2]), parseInt(rgbaMatch[3]), Math.round((parseFloat(rgbaMatch[4]) || 1) * 255)];
+            const alpha = rgbaMatch[4] === undefined ? 1 : parseFloat(rgbaMatch[4]);
+            const targetColor = [parseInt(rgbaMatch[1]), parseInt(rgbaMatch[2]), parseInt(rgbaMatch[3]), Math.round(alpha * 255)];
 
             const startPos = (y * canvas.width + x) * 4;
             const startR = data[startPos], startG = data[startPos+1], startB = data[startPos+2], startA = data[startPos+3];
@@ -3925,6 +4480,49 @@
             ctx.putImageData(imgData, 0, 0);
         }
 
+        function ensureStrokeLayers() {
+            if (!strokeLayer) strokeLayer = document.createElement('canvas');
+            if (strokeLayer.width !== canvas.width || strokeLayer.height !== canvas.height) {
+                strokeLayer.width = canvas.width;
+                strokeLayer.height = canvas.height;
+            }
+        }
+
+        function renderUniformStroke() {
+            if (!strokePoints.length) return;
+            const layerContext = strokeLayer.getContext('2d');
+            layerContext.clearRect(0, 0, strokeLayer.width, strokeLayer.height);
+            layerContext.strokeStyle = baseColor;
+            layerContext.fillStyle = baseColor;
+            layerContext.lineWidth = currentLineWidth;
+            layerContext.lineCap = 'round';
+            layerContext.lineJoin = 'round';
+            layerContext.beginPath();
+            layerContext.moveTo(strokePoints[0].x, strokePoints[0].y);
+            if (strokePoints.length === 1) {
+                layerContext.arc(strokePoints[0].x, strokePoints[0].y, currentLineWidth / 2, 0, Math.PI * 2);
+                layerContext.fill();
+            } else if (strokePoints.length === 2) {
+                layerContext.lineTo(strokePoints[1].x, strokePoints[1].y);
+                layerContext.stroke();
+            } else {
+                for (let index = 1; index < strokePoints.length - 1; index += 1) {
+                    const point = strokePoints[index];
+                    const nextPoint = strokePoints[index + 1];
+                    layerContext.quadraticCurveTo(point.x, point.y, (point.x + nextPoint.x) / 2, (point.y + nextPoint.y) / 2);
+                }
+                const lastPoint = strokePoints[strokePoints.length - 1];
+                layerContext.lineTo(lastPoint.x, lastPoint.y);
+                layerContext.stroke();
+            }
+
+            ctx.globalAlpha = 1;
+            if (strokeBaseSnapshot) ctx.putImageData(strokeBaseSnapshot, 0, 0);
+            ctx.globalAlpha = currentOpacity;
+            ctx.drawImage(strokeLayer, 0, 0);
+            ctx.globalAlpha = 1;
+        }
+
         function startDraw(e) {
             if (tfMode) return; 
             if (shouldBlockDrawing(e)) {
@@ -3939,20 +4537,46 @@
                 return;
             }
 
-            isDrawing = true; startX = pos.x; startY = pos.y;
-            ctx.beginPath(); ctx.moveTo(startX, startY);
-            ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : currentColor;
-            ctx.lineWidth = currentLineWidth; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            isDrawing = true;
+            startX = pos.x;
+            startY = pos.y;
+            if (currentTool === 'pen') {
+                ensureStrokeLayers();
+                strokeBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                strokePoints = [pos];
+                renderUniformStroke();
+                return;
+            }
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = currentLineWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
         }
         function drawing(e) {
             updateBrushCursor(e);
             if(!isDrawing || tfMode || currentTool === 'bucket') return;
             if (shouldBlockDrawing(e)) return;
             const pos = getCoordinates(e);
-            if(currentTool === 'pen' || currentTool === 'eraser') { ctx.lineTo(pos.x, pos.y); ctx.stroke(); }
+            if (currentTool === 'pen') {
+                const previousPoint = strokePoints[strokePoints.length - 1];
+                if (Math.hypot(pos.x - previousPoint.x, pos.y - previousPoint.y) < 0.25) return;
+                strokePoints.push(pos);
+                renderUniformStroke();
+            } else if (currentTool === 'eraser') {
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+            }
         }
         function stopDraw() { 
-            if(isDrawing) { isDrawing = false; saveState(); } 
+            if (isDrawing) {
+                if (currentTool === 'pen') renderUniformStroke();
+                isDrawing = false;
+                strokePoints = [];
+                strokeBaseSnapshot = null;
+                saveState();
+            }
         }
 
         window.setTool = function(tool) {
@@ -3962,6 +4586,39 @@
             document.getElementById(`tool-${tool}`).classList.replace('bg-slate-100', 'bg-emerald-500');
             document.getElementById(`tool-${tool}`).classList.replace('text-slate-600', 'text-white');
         };
+
+        window.downloadCanvas = function() {
+            if (undoStack.length <= 1) return showToast('그림을 먼저 그려주세요.');
+            const link = document.createElement('a');
+            link.download = `pickle-art-${new Date().toISOString().slice(0, 10)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            updateStudioStatus('PNG 파일로 저장됨');
+        };
+
+        function initStudioShortcuts() {
+            window.addEventListener('keydown', (event) => {
+                if (activeTabName !== 'draw' || event.target.matches('input, textarea, select')) return;
+                const key = event.key.toLowerCase();
+                if ((event.ctrlKey || event.metaKey) && key === 'z') {
+                    event.preventDefault();
+                    event.shiftKey ? redo() : undo();
+                } else if ((event.ctrlKey || event.metaKey) && key === 'y') {
+                    event.preventDefault();
+                    redo();
+                } else if (key === 'b') {
+                    setTool('pen');
+                } else if (key === 'e') {
+                    setTool('eraser');
+                } else if (key === 'f') {
+                    setTool('bucket');
+                } else if (key === '[') {
+                    changeLineWidth(currentLineWidth - 1);
+                } else if (key === ']') {
+                    changeLineWidth(currentLineWidth + 1);
+                }
+            });
+        }
         
         window.changeLineWidth = function(v) {
             currentLineWidth = Math.max(1, Math.min(50, parseFloat(v) || 1));
