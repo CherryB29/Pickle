@@ -47,7 +47,8 @@
             getDoc,
             getDocs,
             collectionGroup,
-            runTransaction
+            runTransaction,
+            increment
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -69,7 +70,7 @@
             auth, db, appId, signInAnonymously, createUserWithEmailAndPassword, 
             signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, 
             signOut, onAuthStateChanged, collection, doc, setDoc, getDoc, 
-            getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, collectionGroup, runTransaction
+            getDocs, addDoc, deleteDoc, onSnapshot, updateDoc, collectionGroup, runTransaction, increment
         };
     </script>
 
@@ -224,6 +225,8 @@
         .bowling-select-pin::before { content: ''; position: absolute; left: -2px; right: -2px; top: 42px; height: 34px; background: linear-gradient(90deg, #60a5fa 0 70%, #2563eb 71% 88%, #1d4ed8 89%); box-shadow: inset 2px 0 2px rgba(255,255,255,.28); }
         .bowling-select-pin::after { content: 'P!CKLE'; position: absolute; z-index: 1; top: 54px; left: 4px; width: 43px; color: #2563eb; font-size: 8px; line-height: 10px; text-align: center; font-weight: 900; background: #ffffff; }
         .bowling-select-scene + div { position: relative; z-index: 1; background: #ffffff; }
+        .home-service-slide .bowling-select-scene { overflow: hidden; }
+        .home-service-slide .bowling-select-pin { bottom: 4px; }
         .bowling-game-stage { position: relative; height: 330px; overflow: hidden; touch-action: none; background: linear-gradient(180deg, #f7f3e8 0%, #e2d7c5 42%, #b98549 43%, #6e4528 100%); }
         #bowlingThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
         #bowlingHint { pointer-events: none; opacity: 0; transition: opacity .16s ease, transform .16s ease; }
@@ -299,6 +302,13 @@
         .attendance-reward-card.jackpot.leaving { animation: jackpotRewardOut .6s cubic-bezier(.18, .76, .22, 1) both; }
         .attendance-spark { position: absolute; width: 8px; height: 8px; border-radius: 2px; animation: attendanceSpark 1.25s ease-out forwards; }
         .attendance-exit-spark { position: absolute; z-index: 20; width: 7px; height: 7px; border-radius: 999px; pointer-events: none; animation: attendanceExitSpark .58s cubic-bezier(.16, .7, .2, 1) forwards; }
+        .weekly-reward-card { animation: weeklyRewardReveal .68s cubic-bezier(.16, .9, .2, 1) both; }
+        .weekly-reward-card.leaving { animation: weeklyRewardDismiss .6s cubic-bezier(.35, .02, .72, .32) both; }
+        .weekly-reward-rays { position: absolute; inset: -42%; background: repeating-conic-gradient(from 0deg, rgba(255,255,255,.34) 0 8deg, transparent 8deg 22deg); animation: weeklyRewardSpin 12s linear infinite; }
+        .weekly-reward-chest { position: relative; width: 92px; height: 68px; margin: 2px auto 16px; border: 3px solid #fef3c7; border-radius: 9px; background: linear-gradient(90deg, #8b4513, #d97706 45%, #92400e); box-shadow: inset 0 8px rgba(255,255,255,.18), 0 8px 0 #78350f, 0 16px 20px rgba(69,26,3,.35); animation: weeklyChestBounce .85s cubic-bezier(.2,.8,.25,1) both; }
+        .weekly-reward-chest::before { content: ''; position: absolute; left: -5px; right: -5px; top: 21px; height: 13px; border-block: 2px solid #fef3c7; background: #facc15; }
+        .weekly-reward-chest::after { content: ''; position: absolute; left: 50%; top: -10px; width: 22px; height: 20px; border: 4px solid #fef3c7; border-bottom: 0; border-radius: 14px 14px 0 0; transform: translateX(-50%); }
+        .weekly-reward-coin { position: absolute; left: 50%; top: 44%; z-index: 2; width: 18px; height: 18px; border: 2px solid #fff7b0; border-radius: 999px; background: #facc15; box-shadow: inset 3px 0 #f59e0b, 0 0 10px rgba(254,240,138,.9); animation: weeklyCoinBurst 1.25s cubic-bezier(.14,.8,.2,1) forwards; }
         .weekly-checkin { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 16px; }
         .weekly-checkin-day { min-height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,.12); color: rgba(255,255,255,.72); }
         .weekly-checkin-day.is-today { box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); background: rgba(255,255,255,.08); color: rgba(255,255,255,.88); }
@@ -322,6 +332,11 @@
         @keyframes attendanceSpark { from { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(.8); } to { opacity: 0; transform: translate(var(--spark-x), var(--spark-y)) rotate(300deg) scale(.35); } }
         @keyframes attendanceExitSpark { from { opacity: 1; transform: translate(0, 0) scale(1); } to { opacity: 0; transform: translate(var(--exit-x), var(--exit-y)) scale(.2); } }
         @keyframes weeklyBonusWiggle { 0%, 100% { transform: rotate(0) scale(1); } 12% { transform: rotate(-7deg) scale(1.06); } 24% { transform: rotate(7deg) scale(1.06); } 36% { transform: rotate(-4deg) scale(1.03); } 48% { transform: rotate(0) scale(1); } }
+        @keyframes weeklyRewardReveal { from { opacity: 0; transform: scale(.45) translateY(36px); filter: brightness(.6); } 60% { opacity: 1; transform: scale(1.08) translateY(-4px); filter: brightness(1.2); } to { opacity: 1; transform: scale(1) translateY(0); filter: brightness(1); } }
+        @keyframes weeklyRewardDismiss { 0% { opacity: 1; transform: scale(1) translateY(0) rotate(0); filter: brightness(1); } 30% { opacity: 1; transform: scale(1.08) translateY(-8px) rotate(-1deg); filter: brightness(1.35); } 100% { opacity: 0; transform: scale(.4) translateY(-120px) rotate(7deg); filter: brightness(1.7) blur(2px); } }
+        @keyframes weeklyRewardSpin { to { transform: rotate(360deg); } }
+        @keyframes weeklyChestBounce { 0% { transform: translateY(28px) scale(.7) rotate(-10deg); } 55% { transform: translateY(-8px) scale(1.12) rotate(4deg); } 76% { transform: translateY(3px) scale(.96) rotate(-2deg); } 100% { transform: translateY(0) scale(1) rotate(0); } }
+        @keyframes weeklyCoinBurst { 0% { opacity: 0; transform: translate(-50%, 22px) scale(.2) rotate(0deg); } 24% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--coin-x)), calc(-42px + var(--coin-y))) scale(.72) rotate(560deg); } }
     </style>
 </head>
 <body class="bg-slate-100 relative transition-colors duration-300">
@@ -972,8 +987,8 @@
         let homeServiceSlides = [];
         let homeServiceIndex = 0;
         let homeServiceTimer = null;
-        let homeAuctionReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false };
-        let homePointReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false };
+        let homeAuctionReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false, queuedDirection: 0 };
+        let homePointReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false, queuedDirection: 0 };
 
         // 캔버스 변수
         let currentTool = 'pen';
@@ -1262,6 +1277,7 @@
             clearInterval(reel.timer);
             clearTimeout(reel.transitionTimer);
             reel.isAnimating = false;
+            reel.queuedDirection = 0;
             reel.slides = slides;
             reel.index = 0;
             track.replaceChildren(...slides.map(createSlide), createSlide(slides[0]));
@@ -1284,7 +1300,11 @@
 
         function moveHomeLoopingReel(reel, trackId, dotsId, direction) {
             const track = document.getElementById(trackId);
-            if (!track || reel.slides.length === 0 || reel.isAnimating) return;
+            if (!track || reel.slides.length === 0) return;
+            if (reel.isAnimating) {
+                reel.queuedDirection += direction;
+                return;
+            }
             reel.isAnimating = true;
             const total = reel.slides.length;
             if (direction < 0 && reel.index === 0) {
@@ -1311,6 +1331,11 @@
                     track.classList.remove('is-resetting');
                 }
                 reel.isAnimating = false;
+                if (reel.queuedDirection !== 0) {
+                    const queuedDirection = Math.sign(reel.queuedDirection);
+                    reel.queuedDirection -= queuedDirection;
+                    moveHomeLoopingReel(reel, trackId, dotsId, queuedDirection);
+                }
             };
             track.addEventListener('transitionend', (event) => {
                 if (event.target === track && event.propertyName === 'transform') completeMove();
@@ -1477,7 +1502,7 @@
                     document.getElementById('settingsAccount').innerText = emailText;
 
                     const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-                    onSnapshot(userRef, (snap) => {
+                    onSnapshot(userRef, async (snap) => {
                         if (snap.exists()) {
                             userData = snap.data();
                             favColors = Array.isArray(userData.favoriteColors) && userData.favoriteColors.length
@@ -1495,11 +1520,15 @@
                             } else {
                                 document.getElementById('settingsProfileImg').innerHTML = `🥒`;
                             }
-                        } else {
+                        } else if (!snap.metadata.fromCache) {
                             const defaultNick = pendingSignupNickname || user.displayName || `작가_${user.uid.substring(0,4)}`;
                             const newProfile = { points: 1250, lockedPoints: 0, nickname: defaultNick, email: user.email || 'guest', createdAt: Date.now(), lastCheckInDate: '', checkInDates: [], weeklyBonusClaimedWeek: '', profileImage: '', soldCount: 0, highestBid: 0, pencilSharpenedCount: 0, cucumberCaughtCount: 0, paintSortedCount: 0, tomatoShotCount: 0, bowlingKnockedCount: 0, favoriteColors: [...DEFAULT_FAVORITE_COLORS] };
-                            setDoc(userRef, newProfile);
-                            pendingSignupNickname = '';
+                            try {
+                                await setDoc(userRef, newProfile, { merge: true });
+                                pendingSignupNickname = '';
+                            } catch (error) {
+                                console.error('Profile creation error:', error);
+                            }
                         }
                     }, (err) => console.error("Profile sync error:", err));
 
@@ -2074,7 +2103,7 @@
             const weekKey = getCurrentWeekKey();
             const weeklyDates = getWeekDates();
             const roll = Math.random() * 100;
-            const reward = roll < 5 ? 5000 : roll < 30 ? 2000 : 800;
+            const reward = roll < 70 ? 2000 : roll < 90 ? 4000 : 6000;
 
             try {
                 const { db, appId, doc, runTransaction } = window.FB;
@@ -2436,10 +2465,26 @@
             overlay.classList.remove('hidden');
             overlay.classList.add('flex');
             const card = document.createElement('div');
-            card.className = `attendance-reward-card${reward === 6000 ? ' jackpot' : ''} relative w-full max-w-[290px] overflow-hidden rounded-2xl bg-gradient-to-br ${tier.accent} p-6 text-center text-white shadow-2xl`;
-            card.innerHTML = `<div class="relative z-10"><div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl shadow-inner"><i class="fa-solid ${tier.icon}"></i></div><p class="text-[11px] font-black tracking-wide text-white/80">${tier.label}</p><p class="mt-1 text-4xl font-black">+${reward.toLocaleString()}P</p><p class="mt-3 text-xs font-bold text-white/90">${isWeeklyBonus ? '7일 완주 랜덤 상자 보상입니다' : '오늘의 출석 보상입니다'}</p></div>`;
+            card.className = isWeeklyBonus
+                ? 'weekly-reward-card relative w-full max-w-[320px] overflow-hidden rounded-[28px] border-2 border-amber-200 bg-gradient-to-b from-amber-300 via-orange-500 to-amber-700 px-6 py-8 text-center text-white shadow-2xl'
+                : `attendance-reward-card${reward === 6000 ? ' jackpot' : ''} relative w-full max-w-[290px] overflow-hidden rounded-2xl bg-gradient-to-br ${tier.accent} p-6 text-center text-white shadow-2xl`;
+            if (isWeeklyBonus) {
+                card.innerHTML = `<div class="weekly-reward-rays"></div><div class="relative z-10"><p class="text-[11px] font-black tracking-[.2em] text-amber-950/75">WEEKLY TREASURE</p><div class="weekly-reward-chest"><i class="fa-solid fa-lock absolute inset-0 z-10 flex items-center justify-center text-lg text-amber-950/80"></i></div><p class="text-sm font-black text-white/90">7일 완주 랜덤 상자</p><p class="mt-1 text-5xl font-black tracking-normal text-yellow-100 drop-shadow-[0_4px_0_rgba(120,53,15,.55)]">+${reward.toLocaleString()}P</p><p class="mt-3 text-[11px] font-bold text-white/90">주간 보상이 포인트에 반영되었습니다</p></div>`;
+                for (let index = 0; index < 28; index += 1) {
+                    const coin = document.createElement('span');
+                    const angle = (Math.PI * 2 * index) / 28;
+                    const distance = 70 + Math.random() * 85;
+                    coin.className = 'weekly-reward-coin';
+                    coin.style.setProperty('--coin-x', `${Math.cos(angle) * distance}px`);
+                    coin.style.setProperty('--coin-y', `${Math.sin(angle) * distance}px`);
+                    coin.style.animationDelay = `${Math.random() * .2}s`;
+                    card.appendChild(coin);
+                }
+            } else {
+                card.innerHTML = `<div class="relative z-10"><div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-2xl shadow-inner"><i class="fa-solid ${tier.icon}"></i></div><p class="text-[11px] font-black tracking-wide text-white/80">${tier.label}</p><p class="mt-1 text-4xl font-black">+${reward.toLocaleString()}P</p><p class="mt-3 text-xs font-bold text-white/90">오늘의 출석 보상입니다</p></div>`;
+            }
             overlay.appendChild(card);
-            for (let index = 0; index < 18; index += 1) {
+            for (let index = 0; index < (isWeeklyBonus ? 34 : 18); index += 1) {
                 const spark = document.createElement('span');
                 const angle = (Math.PI * 2 * index) / 18;
                 const distance = 70 + Math.random() * 95;
@@ -2465,12 +2510,12 @@
                     spark.style.setProperty('--exit-y', `${Math.sin(angle) * distance - 46}px`);
                     overlay.appendChild(spark);
                 }
-            }, 1600);
+            }, isWeeklyBonus ? 2400 : 1600);
             setTimeout(() => {
                 overlay.classList.add('hidden');
                 overlay.classList.remove('flex');
                 overlay.replaceChildren();
-            }, 2200);
+            }, isWeeklyBonus ? 3000 : 2200);
         }
 
         function launchGoldConfetti(stage, originX = stage?.clientWidth / 2, originY = stage?.clientHeight * 0.4) {
@@ -3172,6 +3217,7 @@
             ball.castShadow = true;
             ball.position.set(0, .34, 2.45);
             ball.userData.velocity = new THREE.Vector3();
+            ball.userData.mass = .84;
             return ball;
         }
 
@@ -3247,12 +3293,12 @@
         function resetBowlingPins() {
             bowlingGame.pins.forEach((pin) => bowlingGame.scene.remove(pin.mesh));
             bowlingGame.pins = [];
-            const rows = [[0], [-.32, .32], [-.64, 0, .64], [-.96, -.32, .32, .96]];
+            const rows = [[0], [-.38, .38], [-.76, 0, .76], [-1.14, -.38, .38, 1.14]];
             rows.forEach((row, rowIndex) => row.forEach((x) => {
                 const mesh = createBowlingPin();
-                mesh.position.set(x + (Math.random() - .5) * .035, .4, -4.25 - rowIndex * .54);
+                mesh.position.set(x + (Math.random() - .5) * .035, .4, -4.25 - rowIndex * .62);
                 bowlingGame.scene.add(mesh);
-                bowlingGame.pins.push({ mesh, standing: true, counted: false, mass: .75, velocity: new THREE.Vector3(), angular: new THREE.Vector3() });
+                bowlingGame.pins.push({ mesh, standing: true, counted: false, mass: .68, velocity: new THREE.Vector3(), angular: new THREE.Vector3() });
             }));
             bowlingGame.knockedThisFrame = 0;
             document.getElementById('bowlingPinsLeft').innerText = '10';
@@ -3285,8 +3331,8 @@
             bowlingGame.dragCurrent = { pullX, pullY };
             bowlingGame.ball.position.x = pullX * .58;
             bowlingGame.ball.position.z = 2.45 + pullY * .48;
-            const strength = 9 + pullY * 8;
-            const trajectoryColor = strength < 12 ? 0x22c55e : strength < 15 ? 0xf59e0b : 0xf43f5e;
+            const strength = 9.24 + pullY * 7.92;
+            const trajectoryColor = strength < 12.32 ? 0x22c55e : strength < 14.96 ? 0xf59e0b : 0xf43f5e;
             bowlingGame.trajectory.material.color.setHex(trajectoryColor);
             bowlingGame.trajectory.material.opacity = .62 + pullY * .35;
             const target = new THREE.Vector3(pullX * -1.25, .34, -5.9);
@@ -3302,7 +3348,7 @@
             bowlingGame.trajectory.visible = false;
             if (!pull || pull.pullY < .08) { resetBowlingBall(); return; }
             const aimJitter = (Math.random() - .5) * .16;
-            bowlingGame.ball.userData.velocity.set(-pull.pullX * 2.55 + aimJitter, 0, -(9 + pull.pullY * 8));
+            bowlingGame.ball.userData.velocity.set(-pull.pullX * 2.42 + aimJitter, 0, -(9.24 + pull.pullY * 7.92));
             bowlingGame.launchedAt = performance.now();
         }
 
@@ -3357,8 +3403,8 @@
             renderMiniGameStats();
             if (!currentUser?.uid) return;
             try {
-                const { db, appId, doc, updateDoc } = window.FB;
-                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { points: userData.points, bowlingKnockedCount: userData.bowlingKnockedCount });
+                const { db, appId, doc, updateDoc, increment } = window.FB;
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { points: increment(points), bowlingKnockedCount: increment(pins) });
             } catch (error) { console.error('Bowling reward error', error); }
         }
 
@@ -3385,14 +3431,16 @@
                             ball.position.copy(pin.mesh.position).addScaledVector(collisionNormal, -.56);
                             ball.position.y = .34;
                             const impactSpeed = ball.userData.velocity.length();
+                            const normalSpeed = Math.max(0, ball.userData.velocity.dot(collisionNormal));
                             if (pin.standing) {
-                                knockBowlingPin(pin, collisionNormal.multiplyScalar(impactSpeed * .46));
+                                knockBowlingPin(pin, collisionNormal.clone().multiplyScalar(impactSpeed * ball.userData.mass * .47));
                             } else {
-                                pin.velocity.addScaledVector(collisionNormal, impactSpeed * .3 / pin.mass);
-                                pin.velocity.y += Math.min(1.2, impactSpeed * .1);
-                                pin.angular.x += collisionNormal.z * impactSpeed * 1.5;
-                                pin.angular.z -= collisionNormal.x * impactSpeed * 1.5;
+                                pin.velocity.addScaledVector(collisionNormal, impactSpeed * ball.userData.mass * .31 / pin.mass);
+                                pin.velocity.y += Math.min(1.3, impactSpeed * .11);
+                                pin.angular.x += collisionNormal.z * impactSpeed * 1.6;
+                                pin.angular.z -= collisionNormal.x * impactSpeed * 1.6;
                             }
+                            ball.userData.velocity.addScaledVector(collisionNormal, -normalSpeed * .18);
                             ball.userData.velocity.multiplyScalar(pin.standing ? .68 : .74);
                         }
                     });
@@ -3435,9 +3483,12 @@
                     const offset = standingPin.mesh.position.clone().sub(fallenPin.mesh.position);
                     offset.y = 0;
                     const impact = fallenPin.velocity.length();
-                    if (impact > .9 && offset.length() < .5) {
-                        knockBowlingPin(standingPin, offset.normalize().multiplyScalar(Math.max(.65, impact * .36)));
-                        fallenPin.velocity.multiplyScalar(.68);
+                    if (impact > 1.05 && offset.length() < .47) {
+                        const collisionNormal = offset.normalize();
+                        knockBowlingPin(standingPin, collisionNormal.multiplyScalar(Math.max(.72, impact * .33)));
+                        standingPin.angular.y += (Math.random() - .5) * impact * .42;
+                        fallenPin.velocity.addScaledVector(collisionNormal, -impact * .06);
+                        fallenPin.velocity.multiplyScalar(.7);
                     }
                 });
             });
@@ -3935,9 +3986,9 @@
             const previousPoints = userData.points || 0;
             userData.points = (userData.points || 0) + amount;
             animatePointGain(previousPoints, userData.points);
-            const { db, appId, doc, updateDoc } = window.FB;
+            const { db, appId, doc, updateDoc, increment } = window.FB;
             try {
-                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { points: userData.points });
+                await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { points: increment(amount) });
             } catch (error) {
                 console.error('Pencil reward error', error);
             }
@@ -3973,8 +4024,8 @@
                 userData.pencilSharpenedCount = (userData.pencilSharpenedCount || 0) + 1;
                 renderPencilGame();
                 try {
-                    const { db, appId, doc, updateDoc } = window.FB;
-                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { pencilSharpenedCount: userData.pencilSharpenedCount });
+                    const { db, appId, doc, updateDoc, increment } = window.FB;
+                    await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data'), { pencilSharpenedCount: increment(1) });
                 } catch (error) {
                     console.error('Pencil count error', error);
                 }
