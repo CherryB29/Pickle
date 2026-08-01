@@ -111,6 +111,14 @@
             overflow: hidden;
             transition: background-color 0.3s ease;
         }
+        #authBootSplash { position: absolute; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #f8fafc; transition: opacity .2s ease; }
+        #authBootSplash.hidden { display: none; }
+        .auth-boot-logo { width: 132px; height: 132px; object-fit: cover; border-radius: 30px; box-shadow: 0 16px 28px rgba(15, 23, 42, .12); }
+        .auth-boot-title { margin-top: 8px; color: #111827; font-size: 30px; font-weight: 900; line-height: 1; }
+        .auth-boot-copy { color: #cbd5e1; font-size: 12px; font-weight: 700; }
+        #authBootSplash::after { content: ''; width: 22px; height: 22px; border: 3px solid #d1fae5; border-top-color: #22c55e; border-radius: 999px; animation: authBootSpin .7s linear infinite; }
+        .auth-pending #view-login { opacity: 0; pointer-events: none; }
+        @keyframes authBootSpin { to { transform: rotate(360deg); } }
         .canvas-container, .canvas-container canvas {
             touch-action: none;
             user-select: none;
@@ -339,9 +347,15 @@
         @keyframes weeklyCoinBurst { 0% { opacity: 0; transform: translate(-50%, 22px) scale(.2) rotate(0deg); } 24% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--coin-x)), calc(-42px + var(--coin-y))) scale(.72) rotate(560deg); } }
     </style>
 </head>
-<body class="bg-slate-100 relative transition-colors duration-300">
+<body class="auth-pending bg-slate-100 relative transition-colors duration-300">
 
     <div class="app-container transition-colors duration-300">
+
+        <div id="authBootSplash" aria-label="앱 시작 중">
+            <img src="logo.png" alt="Pickle" class="auth-boot-logo" onerror="this.onerror=null; this.outerHTML='<div class=\'auth-boot-logo flex items-center justify-center bg-emerald-50 text-6xl\'>🥒</div>';">
+            <h1 class="auth-boot-title">Pickle</h1>
+            <p class="auth-boot-copy">로딩 중 입니다...</p>
+        </div>
 
         <!-- 0. LOGIN VIEW -->
         <section id="view-login" class="flex-1 flex flex-col items-center justify-center bg-slate-50 px-6 absolute inset-0 z-50 overflow-y-auto py-8">
@@ -987,8 +1001,8 @@
         let homeServiceSlides = [];
         let homeServiceIndex = 0;
         let homeServiceTimer = null;
-        let homeAuctionReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false, queuedDirection: 0 };
-        let homePointReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false, queuedDirection: 0 };
+        let homeAuctionReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false, moveVersion: 0 };
+        let homePointReel = { slides: [], index: 0, timer: null, transitionTimer: null, isAnimating: false, moveVersion: 0 };
 
         // 캔버스 변수
         let currentTool = 'pen';
@@ -1277,7 +1291,7 @@
             clearInterval(reel.timer);
             clearTimeout(reel.transitionTimer);
             reel.isAnimating = false;
-            reel.queuedDirection = 0;
+            reel.moveVersion += 1;
             reel.slides = slides;
             reel.index = 0;
             track.replaceChildren(...slides.map(createSlide), createSlide(slides[0]));
@@ -1301,12 +1315,23 @@
         function moveHomeLoopingReel(reel, trackId, dotsId, direction) {
             const track = document.getElementById(trackId);
             if (!track || reel.slides.length === 0) return;
+            const total = reel.slides.length;
             if (reel.isAnimating) {
-                reel.queuedDirection += direction;
-                return;
+                clearTimeout(reel.transitionTimer);
+                reel.moveVersion += 1;
+                track.classList.add('is-resetting');
+                if (reel.index === total) {
+                    reel.index = 0;
+                    track.style.transform = 'translateX(0)';
+                } else {
+                    track.style.transform = `translateX(-${reel.index * 100}%)`;
+                }
+                void track.offsetWidth;
+                track.classList.remove('is-resetting');
+                reel.isAnimating = false;
             }
             reel.isAnimating = true;
-            const total = reel.slides.length;
+            const moveVersion = ++reel.moveVersion;
             if (direction < 0 && reel.index === 0) {
                 track.classList.add('is-resetting');
                 track.style.transform = `translateX(-${total * 100}%)`;
@@ -1320,7 +1345,7 @@
             document.querySelectorAll(`#${dotsId} .home-reel-dot`).forEach((dot, index) => dot.classList.toggle('is-active', index === displayIndex));
             let completed = false;
             const completeMove = () => {
-                if (completed) return;
+                if (completed || reel.moveVersion !== moveVersion) return;
                 completed = true;
                 clearTimeout(reel.transitionTimer);
                 if (reel.index === total) {
@@ -1331,11 +1356,6 @@
                     track.classList.remove('is-resetting');
                 }
                 reel.isAnimating = false;
-                if (reel.queuedDirection !== 0) {
-                    const queuedDirection = Math.sign(reel.queuedDirection);
-                    reel.queuedDirection -= queuedDirection;
-                    moveHomeLoopingReel(reel, trackId, dotsId, queuedDirection);
-                }
             };
             track.addEventListener('transitionend', (event) => {
                 if (event.target === track && event.propertyName === 'transform') completeMove();
@@ -1482,12 +1502,19 @@
                     setupFirebaseAuth();
                 }
             }, 100);
+            setTimeout(() => {
+                if (!document.body.classList.contains('auth-pending')) return;
+                document.body.classList.remove('auth-pending');
+                document.getElementById('authBootSplash')?.classList.add('hidden');
+            }, 7000);
         });
 
         function setupFirebaseAuth() {
             const { auth, onAuthStateChanged, db, appId, doc, setDoc, onSnapshot } = window.FB;
 
             onAuthStateChanged(auth, async (user) => {
+                document.body.classList.remove('auth-pending');
+                document.getElementById('authBootSplash')?.classList.add('hidden');
                 if (user) {
                     currentUser = user;
                     
@@ -1660,7 +1687,7 @@
         window.showLogoutModal = function() { document.getElementById('logoutModal').classList.remove('hidden'); }
         window.executeLogout = async function() {
             document.getElementById('logoutModal').classList.add('hidden');
-            try { await window.FB.signOut(window.FB.auth); showToast("안전하게 로그아웃 되었습니다."); } catch(e) {}
+            try { await window.FB.signOut(window.FB.auth); showToast("로그아웃 되었습니다."); } catch(e) {}
         }
 
         // =====================================
@@ -3440,8 +3467,8 @@
                                 pin.angular.x += collisionNormal.z * impactSpeed * 1.6;
                                 pin.angular.z -= collisionNormal.x * impactSpeed * 1.6;
                             }
-                            ball.userData.velocity.addScaledVector(collisionNormal, -normalSpeed * .18);
-                            ball.userData.velocity.multiplyScalar(pin.standing ? .68 : .74);
+                            ball.userData.velocity.addScaledVector(collisionNormal, -normalSpeed * (pin.standing ? .18 : .07));
+                            ball.userData.velocity.multiplyScalar(pin.standing ? .68 : .84);
                         }
                     });
                 }
