@@ -118,6 +118,7 @@
         .auth-boot-copy { color: #cbd5e1; font-size: 12px; font-weight: 700; }
         #authBootSplash::after { content: ''; width: 22px; height: 22px; border: 3px solid #d1fae5; border-top-color: #22c55e; border-radius: 999px; animation: authBootSpin .7s linear infinite; }
         .auth-pending #view-login { opacity: 0; pointer-events: none; }
+        .studio-mode { user-select: none; -webkit-user-select: none; }
         @keyframes authBootSpin { to { transform: rotate(360deg); } }
         .canvas-container, .canvas-container canvas {
             touch-action: none;
@@ -228,7 +229,7 @@
         .pencil-game-stage { background: linear-gradient(135deg, #d7f3f2 0%, #f8e7bc 58%, #f2d797 100%); overflow: hidden; isolation: isolate; touch-action: manipulation; }
         #pencilThreeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
         .bowling-select-scene { height: 160px; position: relative; overflow: visible; background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 52%, #cffafe 100%); }
-        .bowling-select-ball { position: absolute; left: 17%; bottom: -19px; width: 84px; height: 84px; border-radius: 50%; background: radial-gradient(circle at 30% 25%, #ffffff 0 7%, #f472b6 8% 35%, #be185d 72%); box-shadow: inset -12px -14px 18px rgba(90, 10, 50, .25), 7px 10px 12px rgba(70, 45, 80, .18); }
+        .bowling-select-ball { position: absolute; left: 5%; bottom: -19px; width: 84px; height: 84px; border-radius: 50%; background: radial-gradient(circle at 30% 25%, #ffffff 0 7%, #f472b6 8% 35%, #be185d 72%); box-shadow: inset -12px -14px 18px rgba(90, 10, 50, .25), 7px 10px 12px rgba(70, 45, 80, .18); }
         .bowling-select-pin { --pin-scale: 1; position: absolute; bottom: -22px; width: 62px; height: 112px; border-radius: 7px; clip-path: polygon(6% 0, 88% 6%, 100% 14%, 100% 100%, 0 100%, 0 8%); transform: scale(var(--pin-scale)) !important; transform-origin: bottom center; background: linear-gradient(90deg, #ffffff 0 72%, #cbd5e1 73% 88%, #94a3b8 89%); box-shadow: inset -4px 0 5px rgba(100,116,139,.16), 10px 10px 0 rgba(100,116,139,.3), 13px 13px 11px rgba(30,41,59,.18); }
         .bowling-select-pin::before { content: ''; position: absolute; left: -2px; right: -2px; top: 42px; height: 34px; background: linear-gradient(90deg, #60a5fa 0 70%, #2563eb 71% 88%, #1d4ed8 89%); box-shadow: inset 2px 0 2px rgba(255,255,255,.28); }
         .bowling-select-pin::after { content: 'P!CKLE'; position: absolute; z-index: 1; top: 54px; left: 4px; width: 43px; color: #2563eb; font-size: 8px; line-height: 10px; text-align: center; font-weight: 900; background: #ffffff; }
@@ -477,7 +478,7 @@
             </section>
 
             <!-- 2. DRAWING STUDIO -->
-            <section id="view-draw" class="hidden absolute inset-0 px-4 pt-3 pb-24 flex flex-col overflow-y-auto no-scrollbar bg-slate-50">
+            <section id="view-draw" class="hidden select-none absolute inset-0 px-4 pt-3 pb-24 flex flex-col overflow-y-auto no-scrollbar bg-slate-50">
                 <div class="flex justify-between items-center mb-2 flex-shrink-0">
                     <h2 class="select-none text-lg font-bold text-slate-800">스튜디오</h2>
                     <div class="flex gap-1.5">
@@ -535,7 +536,7 @@
                         </label>
                     </div>
                     
-                    <!-- 선/투명도 조절 영역 -->
+                    <!-- 도구 속성 조절 영역 -->
                     <div class="flex items-center gap-3 pt-2 border-t border-slate-100 mt-1">
                         <!-- 컬러 피커 트리거 버튼 -->
                         <div class="flex items-center justify-center gap-1.5 cursor-pointer bg-slate-50 px-2 py-2 rounded-xl active:scale-95 border border-slate-200 flex-shrink-0 h-[46px]" onclick="openColorPicker()">
@@ -545,12 +546,12 @@
                         
                         <div class="flex-1 flex flex-col justify-center gap-2.5">
                             <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-circle text-[8px] text-slate-400 w-4 text-center"></i>
+                                <span id="toolPrimaryLabel" class="w-10 text-[10px] font-bold text-slate-400">두께</span>
                                 <input type="range" id="lineWidth" min="1" max="50" value="4" oninput="changeLineWidth(this.value)" class="min-w-0 flex-1 accent-emerald-500 h-1.5">
-                                <div class="flex items-center gap-1 text-[11px] font-bold text-slate-500"><input type="number" id="lineWidthValue" min="1" max="50" value="4" oninput="changeLineWidthInput(this.value)" class="w-11 rounded-md border border-slate-200 bg-slate-50 px-1 py-1 text-right text-[11px] font-bold text-slate-700 focus:border-emerald-500 focus:outline-none"><span>px</span></div>
+                                <div class="flex items-center gap-1 text-[11px] font-bold text-slate-500"><input type="number" id="lineWidthValue" min="1" max="50" value="4" oninput="changeLineWidthInput(this.value)" class="w-11 rounded-md border border-slate-200 bg-slate-50 px-1 py-1 text-right text-[11px] font-bold text-slate-700 focus:border-emerald-500 focus:outline-none"><span id="toolPrimaryUnit">px</span></div>
                             </div>
                             <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-droplet-slash text-[10px] text-slate-400 w-4 text-center"></i>
+                                <span class="w-10 text-[10px] font-bold text-slate-400">투명도</span>
                                 <input type="range" id="lineOpacity" min="0" max="1" step="0.01" value="1" oninput="changeOpacity(this.value)" class="min-w-0 flex-1 accent-emerald-500 h-1.5">
                                 <div class="flex items-center gap-1 text-[11px] font-bold text-slate-500"><input type="number" id="lineOpacityValue" min="0" max="100" value="100" oninput="changeOpacityPercent(this.value)" class="w-11 rounded-md border border-slate-200 bg-slate-50 px-1 py-1 text-right text-[11px] font-bold text-slate-700 focus:border-emerald-500 focus:outline-none"><span>%</span></div>
                             </div>
@@ -651,7 +652,7 @@
                     </button>
                     <button onclick="openBowlingGame()" class="w-full overflow-hidden rounded-2xl border border-sky-200 bg-white text-left shadow-sm active:scale-[0.99] transition-transform">
                         <div class="bowling-select-scene"><div class="bowling-select-ball"></div><div class="bowling-select-pin" style="left:53%;--pin-scale:.75"></div><div class="bowling-select-pin" style="left:64%;--pin-scale:.96"></div><div class="bowling-select-pin" style="left:76%;--pin-scale:.68"></div><div class="absolute right-4 top-3 rounded-full bg-white/90 px-2 py-1 text-[10px] font-black text-sky-700">PLAY</div></div>
-                        <div class="flex items-center justify-between p-4"><div><h3 class="font-black text-slate-800">지우개 볼링</h3><p class="mt-0.5 text-[11px] text-slate-500">새총으로 공을 쏴 지우개 핀을 쓰러뜨리세요.</p><p class="mt-1 text-[10px] font-black text-sky-600">누적 <span id="bowlingCardCount">0</span>핀</p></div><i class="fa-solid fa-chevron-right text-sm text-slate-300"></i></div>
+                        <div class="flex items-center justify-between p-4"><div><h3 class="font-black text-slate-800">지우개 볼링</h3><p class="mt-0.5 text-[11px] text-slate-500">공을 쏴 지우개 핀을 쓰러뜨리세요.</p><p class="mt-1 text-[10px] font-black text-sky-600">누적 <span id="bowlingCardCount">0</span>핀</p></div><i class="fa-solid fa-chevron-right text-sm text-slate-300"></i></div>
                     </button>
                 </div>
 
@@ -717,7 +718,7 @@
                 </div>
 
                 <div id="bowlingGamePanel" class="hidden rounded-2xl bg-white border border-sky-200 p-4 shadow-sm space-y-3">
-                    <div class="flex items-center justify-between"><div><button onclick="closeBowlingGame()" class="mb-2 flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-600 shadow-sm active:scale-[0.97]"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button><h3 class="font-black text-slate-800">지우개 볼링</h3><p class="text-[11px] text-slate-500 mt-0.5">공을 뒤로 당겨 조준한 뒤 놓으세요. 한 프레임에 두 번 기회가 있습니다.</p></div><div class="whitespace-nowrap rounded-full bg-sky-100 px-3 py-1.5 text-xs font-black text-sky-700">획득 <span id="bowlingScore">0</span>P</div></div>
+                    <div class="flex items-center justify-between"><div><button onclick="closeBowlingGame()" class="mb-2 flex min-h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-black text-slate-600 shadow-sm active:scale-[0.97]"><i class="fa-solid fa-chevron-left"></i> 게임 선택</button><h3 class="font-black text-slate-800">지우개 볼링</h3><p class="text-[11px] text-slate-500 mt-0.5">공을 뒤로 당겨 조준한 뒤 놓으세요.</p></div><div class="whitespace-nowrap rounded-full bg-sky-100 px-3 py-1.5 text-xs font-black text-sky-700">획득 <span id="bowlingScore">0</span>P</div></div>
                     <div id="bowlingGameStage" class="bowling-game-stage rounded-xl border border-sky-200" aria-label="지우개 볼링 게임판"><canvas id="bowlingThreeCanvas"></canvas><div class="absolute left-3 top-3 z-10 rounded-lg bg-slate-900/70 px-2.5 py-1.5 text-[10px] font-black text-white">남은 핀 <span id="bowlingPinsLeft">10</span></div><div class="absolute right-3 top-3 z-10 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black text-sky-700">누적 <span id="bowlingPersonalCount">0</span>핀</div><div id="bowlingHint" class="absolute inset-x-0 bottom-3 z-10 text-center font-black text-white"></div></div>
                     <div class="grid grid-cols-3 gap-2 text-center"><div class="rounded-lg bg-slate-50 py-2"><p class="text-[10px] font-bold text-slate-500">핀</p><p class="text-xs font-black text-slate-700">2P</p></div><div class="rounded-lg bg-amber-50 py-2"><p class="text-[10px] font-bold text-amber-600">스트라이크</p><p class="text-xs font-black text-amber-700">+20P</p></div><div class="rounded-lg bg-sky-50 py-2"><p class="text-[10px] font-bold text-sky-600">스페어</p><p class="text-xs font-black text-sky-700">+5P</p></div></div>
                     <div class="rounded-xl border border-sky-100 bg-sky-50/60 p-3"><div class="mb-2 flex items-center justify-between"><h4 class="text-xs font-black text-sky-900"><i class="fa-solid fa-trophy text-amber-500"></i> 지우개 볼링 랭킹</h4><span class="text-[10px] font-bold text-sky-600">누적 핀</span></div><ol id="bowlingRanking" class="space-y-1 text-[11px] text-slate-500"><li>랭킹을 불러오는 중입니다.</li></ol></div>
@@ -1012,6 +1013,11 @@
         let applePencilOnly = false;
         const APPLE_PENCIL_ONLY_STORAGE_KEY = 'pickle.applePencilOnly';
         let currentLineWidth = 4;
+        const toolSettings = {
+            pen: { width: 4, opacity: 1 },
+            eraser: { width: 20, opacity: 1 },
+            bucket: { tolerance: 60, opacity: 1 }
+        };
         let isDrawing = false, startX = 0, startY = 0, snapshot = null;
         let strokeLayer = null;
         let strokeBaseSnapshot = null;
@@ -1174,7 +1180,7 @@
                 { id: 'cucumber', title: '오이 받기', description: '바구니를 움직여 오이를 받아보세요.', icon: 'fa-basket-shopping', accent: 'emerald', action: "openRecommendedGame('cucumber')" },
                 { id: 'paint', title: '페인트 분류', description: '빠르게 색을 구분해 보세요.', icon: 'fa-fill-drip', accent: 'sky', action: "openRecommendedGame('paint')" },
                 { id: 'tomato', title: '토마토 사격', description: '날아가는 토마토를 정확히 맞히세요.', icon: 'fa-crosshairs', accent: 'rose', action: "openRecommendedGame('tomato')" },
-                { id: 'bowling', title: '지우개 볼링', description: '새총으로 공을 쏴 핀을 쓰러뜨리세요.', icon: 'fa-bowling-ball', accent: 'sky', action: "openRecommendedGame('bowling')" }
+                { id: 'bowling', title: '지우개 볼링', description: '공을 쏴 핀을 쓰러뜨리세요.', icon: 'fa-bowling-ball', accent: 'sky', action: "openRecommendedGame('bowling')" }
             ].sort(() => Math.random() - .5);
             const featuredAuctions = [...auctionItemsList]
                 .sort((first, second) => {
@@ -1420,7 +1426,7 @@
                 { id: 'cucumber', title: '오이 받기', description: '바구니를 움직여 오이를 받아보세요.', border: 'border-emerald-200' },
                 { id: 'paint', title: '페인트 분류', description: '색상에 맞는 버튼으로 분류하세요.', border: 'border-slate-200' },
                 { id: 'tomato', title: '토마토 사격', description: '날아가는 토마토를 맞히세요.', border: 'border-rose-200' },
-                { id: 'bowling', title: '지우개 볼링', description: '새총으로 공을 쏴 핀을 쓰러뜨리세요.', border: 'border-sky-200' }
+                { id: 'bowling', title: '지우개 볼링', description: '공을 쏴 핀을 쓰러뜨리세요.', border: 'border-sky-200' }
             ].sort(() => Math.random() - .5);
             renderHomeLoopingReel(homeAuctionReel, 'homeAuctionTrack', 'homeAuctionDots', featuredAuctions.length ? featuredAuctions : [null], createHomeAuctionSlide);
             renderHomeLoopingReel(homePointReel, 'homePointTrack', 'homePointDots', games, createHomePointSlide);
@@ -1492,7 +1498,6 @@
             renderHomePaintImages();
             renderHomeLobbyReels();
             initCanvas();
-            enableTabSwipe();
             setupImageTransformEvents();
             renderFavColors();
             initColorPicker(); 
@@ -2623,6 +2628,7 @@
                 nextView.classList.remove('hidden');
             }
             activeTabName = tabName;
+            document.body.classList.toggle('studio-mode', tabName === 'draw');
 
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('text-emerald-500'); btn.classList.add('text-slate-400');
@@ -2654,29 +2660,6 @@
                 renderMiniGameStats();
             }
             if (tabName !== 'points') resetPointGamePanels();
-        }
-
-        function enableTabSwipe() {
-            const main = document.getElementById('appMain');
-            if (!main || main.dataset.tabSwipeBound) return;
-            const blockedSelector = 'canvas, input, textarea, select, button, a, [contenteditable="true"], .home-reel-track, .game-stage, .pencil-game-stage, .bowling-game-stage, .paint-game-stage, .tomato-game-stage';
-            const tabs = ['home', 'draw', 'auction', 'points', 'gallery', 'settings'];
-            let swipeStart = null;
-            main.addEventListener('pointerdown', (event) => {
-                if (event.pointerType !== 'touch' || event.target.closest(blockedSelector)) return;
-                swipeStart = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
-            }, { passive: true });
-            main.addEventListener('pointerup', (event) => {
-                if (!swipeStart || swipeStart.pointerId !== event.pointerId) return;
-                const distanceX = event.clientX - swipeStart.x;
-                const distanceY = event.clientY - swipeStart.y;
-                swipeStart = null;
-                if (Math.abs(distanceX) < 72 || Math.abs(distanceX) < Math.abs(distanceY) * 1.4) return;
-                const nextIndex = tabs.indexOf(activeTabName) + (distanceX < 0 ? 1 : -1);
-                if (nextIndex >= 0 && nextIndex < tabs.length) switchTab(tabs[nextIndex]);
-            }, { passive: true });
-            main.addEventListener('pointercancel', () => { swipeStart = null; }, { passive: true });
-            main.dataset.tabSwipeBound = 'true';
         }
 
         function resetPointGamePanels() {
@@ -4530,7 +4513,7 @@
 
             if (startR === targetColor[0] && startG === targetColor[1] && startB === targetColor[2] && startA === targetColor[3]) return;
 
-            const tolerance = 60; 
+            const tolerance = toolSettings.bucket.tolerance;
             const matchStartColor = (pos) => {
                 return Math.abs(data[pos] - startR) <= tolerance &&
                        Math.abs(data[pos+1] - startG) <= tolerance &&
@@ -4600,17 +4583,14 @@
 
             ctx.globalAlpha = 1;
             if (strokeBaseSnapshot) ctx.putImageData(strokeBaseSnapshot, 0, 0);
-            ctx.globalAlpha = currentOpacity;
+            ctx.globalAlpha = toolSettings.pen.opacity;
             ctx.drawImage(strokeLayer, 0, 0);
             ctx.globalAlpha = 1;
         }
 
         function startDraw(e) {
             if (tfMode) return; 
-            if (shouldBlockDrawing(e)) {
-                showToast('애플펜슬 전용 모드에서는 펜으로만 그릴 수 있습니다.');
-                return;
-            }
+            if (shouldBlockDrawing(e)) return;
             const pos = getCoordinates(e); 
 
             if (currentTool === 'bucket') {
@@ -4632,9 +4612,10 @@
             ctx.beginPath();
             ctx.moveTo(startX, startY);
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = currentLineWidth;
+            ctx.lineWidth = toolSettings.eraser.width;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
+            ctx.globalAlpha = toolSettings.eraser.opacity;
         }
         function drawing(e) {
             updateBrushCursor(e);
@@ -4657,12 +4638,29 @@
                 isDrawing = false;
                 strokePoints = [];
                 strokeBaseSnapshot = null;
+                ctx.globalAlpha = 1;
                 saveState();
             }
         }
 
         window.setTool = function(tool) {
             currentTool = tool;
+            const settings = toolSettings[tool];
+            const isBucket = tool === 'bucket';
+            currentLineWidth = isBucket ? settings.tolerance : settings.width;
+            currentOpacity = settings.opacity;
+            document.getElementById('toolPrimaryLabel').innerText = isBucket ? '민감도' : '두께';
+            document.getElementById('toolPrimaryUnit').innerText = isBucket ? '' : 'px';
+            document.getElementById('lineWidth').min = isBucket ? '0' : '1';
+            document.getElementById('lineWidth').max = isBucket ? '255' : '50';
+            document.getElementById('lineWidth').value = currentLineWidth;
+            document.getElementById('lineWidthValue').min = isBucket ? '0' : '1';
+            document.getElementById('lineWidthValue').max = isBucket ? '255' : '50';
+            document.getElementById('lineWidthValue').value = currentLineWidth;
+            document.getElementById('lineOpacity').value = currentOpacity;
+            document.getElementById('lineOpacityValue').value = Math.round(currentOpacity * 100);
+            currentColor = hexToRgbaStr(baseColor, currentOpacity);
+            document.getElementById('toolbarColorPreview').style.opacity = currentOpacity;
             hideBrushCursor();
             document.querySelectorAll('.tool-btn').forEach(btn => { btn.classList.remove('bg-emerald-500', 'text-white'); btn.classList.add('bg-slate-100', 'text-slate-600'); });
             document.getElementById(`tool-${tool}`).classList.replace('bg-slate-100', 'bg-emerald-500');
@@ -4703,7 +4701,10 @@
         }
         
         window.changeLineWidth = function(v) {
-            currentLineWidth = Math.max(1, Math.min(50, parseFloat(v) || 1));
+            const isBucket = currentTool === 'bucket';
+            currentLineWidth = Math.max(isBucket ? 0 : 1, Math.min(isBucket ? 255 : 50, parseFloat(v) || 0));
+            if (isBucket) toolSettings.bucket.tolerance = currentLineWidth;
+            else toolSettings[currentTool].width = currentLineWidth;
             document.getElementById('lineWidth').value = currentLineWidth;
             document.getElementById('lineWidthValue').value = currentLineWidth;
             renderOverlayCanvas();
@@ -4714,6 +4715,7 @@
         };
         window.changeOpacity = function(v) { 
             currentOpacity = Math.max(0, Math.min(1, parseFloat(v) || 0));
+            toolSettings[currentTool].opacity = currentOpacity;
             document.getElementById('lineOpacity').value = currentOpacity;
             document.getElementById('lineOpacityValue').value = Math.round(currentOpacity * 100);
             currentColor = hexToRgbaStr(baseColor, currentOpacity);
