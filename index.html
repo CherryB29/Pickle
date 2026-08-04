@@ -4287,6 +4287,9 @@
                 canvasTouchPoints.delete(e.pointerId);
                 if (canvasTouchPoints.size < 2) endCanvasPinch();
                 if (!touchGestureCancelled) stopDraw();
+                if (typeof e.pointerId === 'number' && canvas.hasPointerCapture?.(e.pointerId)) {
+                    canvas.releasePointerCapture(e.pointerId);
+                }
                 if (canvasTouchPoints.size === 0) {
                     touchGestureSnapshot = null;
                     touchGestureCancelled = false;
@@ -4295,6 +4298,8 @@
             canvas.addEventListener('pointerup', endCanvasPointer);
             canvas.addEventListener('pointercancel', endCanvasPointer);
             canvas.addEventListener('pointerleave', hideBrushCursor);
+            window.addEventListener('pointerup', (event) => { if (isDrawing) endCanvasPointer(event); }, { passive: true });
+            window.addEventListener('blur', () => { if (isDrawing) stopDraw(); }, { passive: true });
             canvas.addEventListener('contextmenu', (event) => event.preventDefault());
             initStudioShortcuts();
         }
@@ -4557,15 +4562,19 @@
             if (!strokePoints.length) return;
             const layerContext = strokeLayer.getContext('2d');
             layerContext.clearRect(0, 0, strokeLayer.width, strokeLayer.height);
-            layerContext.strokeStyle = baseColor;
-            layerContext.fillStyle = baseColor;
-            layerContext.lineWidth = currentLineWidth;
+            const isEraserStroke = currentTool === 'eraser';
+            const strokeColor = isEraserStroke ? '#ffffff' : baseColor;
+            const strokeWidth = isEraserStroke ? toolSettings.eraser.width : currentLineWidth;
+            const strokeOpacity = isEraserStroke ? toolSettings.eraser.opacity : toolSettings.pen.opacity;
+            layerContext.strokeStyle = strokeColor;
+            layerContext.fillStyle = strokeColor;
+            layerContext.lineWidth = strokeWidth;
             layerContext.lineCap = 'round';
             layerContext.lineJoin = 'round';
             layerContext.beginPath();
             layerContext.moveTo(strokePoints[0].x, strokePoints[0].y);
             if (strokePoints.length === 1) {
-                layerContext.arc(strokePoints[0].x, strokePoints[0].y, currentLineWidth / 2, 0, Math.PI * 2);
+                layerContext.arc(strokePoints[0].x, strokePoints[0].y, strokeWidth / 2, 0, Math.PI * 2);
                 layerContext.fill();
             } else if (strokePoints.length === 2) {
                 layerContext.lineTo(strokePoints[1].x, strokePoints[1].y);
@@ -4583,7 +4592,7 @@
 
             ctx.globalAlpha = 1;
             if (strokeBaseSnapshot) ctx.putImageData(strokeBaseSnapshot, 0, 0);
-            ctx.globalAlpha = toolSettings.pen.opacity;
+            ctx.globalAlpha = strokeOpacity;
             ctx.drawImage(strokeLayer, 0, 0);
             ctx.globalAlpha = 1;
         }
@@ -4602,39 +4611,48 @@
             isDrawing = true;
             startX = pos.x;
             startY = pos.y;
-            if (currentTool === 'pen') {
+            if (currentTool === 'pen' || currentTool === 'eraser') {
                 ensureStrokeLayers();
                 strokeBaseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 strokePoints = [pos];
                 renderUniformStroke();
                 return;
             }
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = toolSettings.eraser.width;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.globalAlpha = toolSettings.eraser.opacity;
         }
+
+        function appendStrokePoint(pos) {
+            const previousPoint = strokePoints[strokePoints.length - 1];
+            if (!previousPoint) {
+                strokePoints.push(pos);
+                return true;
+            }
+            if (Math.hypot(pos.x - previousPoint.x, pos.y - previousPoint.y) < 0.25) return false;
+            strokePoints.push(pos);
+            return true;
+        }
+
+        function applyDrawingEvent(rawEvent) {
+            const pos = getCoordinates(rawEvent);
+            if (currentTool === 'pen' || currentTool === 'eraser') {
+                if (!appendStrokePoint(pos)) return;
+                renderUniformStroke();
+            }
+        }
+
         function drawing(e) {
             updateBrushCursor(e);
             if(!isDrawing || tfMode || currentTool === 'bucket') return;
             if (shouldBlockDrawing(e)) return;
-            const pos = getCoordinates(e);
-            if (currentTool === 'pen') {
-                const previousPoint = strokePoints[strokePoints.length - 1];
-                if (Math.hypot(pos.x - previousPoint.x, pos.y - previousPoint.y) < 0.25) return;
-                strokePoints.push(pos);
-                renderUniformStroke();
-            } else if (currentTool === 'eraser') {
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
+            const coalescedEvents = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null;
+            if (coalescedEvents?.length) {
+                coalescedEvents.forEach((rawEvent) => applyDrawingEvent(rawEvent));
+                return;
             }
+            applyDrawingEvent(e);
         }
         function stopDraw() { 
             if (isDrawing) {
-                if (currentTool === 'pen') renderUniformStroke();
+                if (currentTool === 'pen' || currentTool === 'eraser') renderUniformStroke();
                 isDrawing = false;
                 strokePoints = [];
                 strokeBaseSnapshot = null;
@@ -4644,23 +4662,25 @@
         }
 
         window.setTool = function(tool) {
-            currentTool = tool;
             const settings = toolSettings[tool];
-            const isBucket = tool === 'bucket';
-            currentLineWidth = isBucket ? settings.tolerance : settings.width;
-            currentOpacity = settings.opacity;
-            document.getElementById('toolPrimaryLabel').innerText = isBucket ? '민감도' : '두께';
-            document.getElementById('toolPrimaryUnit').innerText = isBucket ? '' : 'px';
-            document.getElementById('lineWidth').min = isBucket ? '0' : '1';
-            document.getElementById('lineWidth').max = isBucket ? '255' : '50';
-            document.getElementById('lineWidth').value = currentLineWidth;
-            document.getElementById('lineWidthValue').min = isBucket ? '0' : '1';
-            document.getElementById('lineWidthValue').max = isBucket ? '255' : '50';
-            document.getElementById('lineWidthValue').value = currentLineWidth;
-            document.getElementById('lineOpacity').value = currentOpacity;
-            document.getElementById('lineOpacityValue').value = Math.round(currentOpacity * 100);
-            currentColor = hexToRgbaStr(baseColor, currentOpacity);
-            document.getElementById('toolbarColorPreview').style.opacity = currentOpacity;
+            if (settings) {
+                currentTool = tool;
+                const isBucket = tool === 'bucket';
+                currentLineWidth = isBucket ? settings.tolerance : settings.width;
+                currentOpacity = settings.opacity;
+                document.getElementById('toolPrimaryLabel').innerText = isBucket ? '민감도' : '두께';
+                document.getElementById('toolPrimaryUnit').innerText = isBucket ? '' : 'px';
+                document.getElementById('lineWidth').min = isBucket ? '0' : '1';
+                document.getElementById('lineWidth').max = isBucket ? '255' : '50';
+                document.getElementById('lineWidth').value = currentLineWidth;
+                document.getElementById('lineWidthValue').min = isBucket ? '0' : '1';
+                document.getElementById('lineWidthValue').max = isBucket ? '255' : '50';
+                document.getElementById('lineWidthValue').value = currentLineWidth;
+                document.getElementById('lineOpacity').value = currentOpacity;
+                document.getElementById('lineOpacityValue').value = Math.round(currentOpacity * 100);
+                currentColor = hexToRgbaStr(baseColor, currentOpacity);
+                document.getElementById('toolbarColorPreview').style.opacity = currentOpacity;
+            }
             hideBrushCursor();
             document.querySelectorAll('.tool-btn').forEach(btn => { btn.classList.remove('bg-emerald-500', 'text-white'); btn.classList.add('bg-slate-100', 'text-slate-600'); });
             document.getElementById(`tool-${tool}`).classList.replace('bg-slate-100', 'bg-emerald-500');
@@ -5043,6 +5063,7 @@
             overlayCanvas.classList.add('hidden');
             document.getElementById('imageTransformUI').classList.add('hidden');
             oCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            setTool(currentTool);
         }
 
         window.openAuctionModalFromCanvas = function() {
